@@ -2,8 +2,9 @@
 
 Automação da **pauta de audiências semanal** do escritório **Calmon & Freitas Advogados**.
 
-O projeto lê os compromissos de audiência de um calendário exportado (Outlook/Google
-Calendar, formato `.ics`) e gera automaticamente:
+O projeto lê os compromissos de audiência de um calendário — direto de um **feed .ics
+público do Google Agenda** (integração ao vivo, sem exportação manual) ou de um arquivo
+`.ics` exportado do Outlook/Google Calendar — e gera automaticamente:
 
 - uma planilha **Excel** (`.xlsx`) no modelo já usado pelo escritório (título, período,
   total, colunas DATA / HORÁRIO / PARTE AUTORA / PARTE RÉ / PROCESSO / VARA /
@@ -38,10 +39,24 @@ AUDIÊNCIA: 3002212-72.2026.8.06.0297 | FABRICIO GOMES x BANCO BMG SA | Núcleo 
 Coloque o link da videoconferência (Teams, Webex, Lifesize etc.) na descrição ou local
 do evento — ele é detectado automaticamente e vai para a coluna "Observações / Link".
 
-Se um evento não seguir essa convenção, o parser tenta heurísticas (procura o número
-do processo em qualquer lugar do texto, separador `x` entre as partes, nome de um
-responsável cadastrado em `PAUTACF_EQUIPE`). Campos não encontrados ficam em branco
-para preenchimento manual.
+Se um evento não seguir essa convenção, o parser tenta heurísticas:
+
+- número do processo em qualquer lugar do texto, formatado (`NNNNNNN-DD.AAAA.J.TR.OOOO`)
+  ou só os 20 dígitos corridos (comum em feeds de tribunal/sistema de acompanhamento
+  processual) — nesse caso ele é reformatado automaticamente no padrão CNJ;
+- separador `x` entre as partes no título;
+- uma linha `Foro:` ou `Vara:` na descrição para preencher o Juízo/Vara, e uma linha
+  `Cliente:` como reserva para a parte autora;
+- nome de um responsável cadastrado em `PAUTACF_EQUIPE`.
+
+Campos não encontrados ficam em branco para preenchimento manual — a coluna
+RESPONSÁVEL, por exemplo, raramente vem preenchida no calendário e tem uma lista
+suspensa na planilha gerada (com os nomes de `PAUTACF_EQUIPE`) para facilitar o
+preenchimento manual, assim como a coluna STATUS.
+
+Eventos de **dia inteiro são ignorados de propósito**: em feeds de tribunal costumam
+representar prazos processuais (ex.: "PROTOCOLO - 15 dias..."), não audiências
+marcadas — mesmo quando têm um número de processo no texto.
 
 Palavras como "cancelada", "redesignada"/"remarcada", "adiada" e "realizada" no
 evento atualizam automaticamente a coluna STATUS.
@@ -59,15 +74,30 @@ pip install -e .
 
 Copie `.env.example` para `.env` e ajuste conforme necessário (equipe, SMTP, etc.).
 
+### Fonte do calendário
+
+Duas opções, configuráveis no `.env` (`PAUTACF_ICS_URL` tem prioridade sobre
+`PAUTACF_ICS`) ou via `--ics` no CLI:
+
+- **Feed público do Google Agenda (recomendado)** — em Configurações do calendário →
+  "Integrar calendário" → copie o "Endereço público em formato iCal" e coloque em
+  `PAUTACF_ICS_URL`. Não precisa de exportação manual nem de credenciais: o feed é
+  lido ao vivo a cada execução.
+- **Arquivo `.ics` local** — exportado manualmente do Outlook ou Google Calendar,
+  caminho em `PAUTACF_ICS`.
+
 ## Uso — gerar a pauta semanal
 
-1. No Outlook ou Google Calendar, exporte a agenda como `.ics`.
-2. Rode:
+Com `PAUTACF_ICS_URL` configurado no `.env`:
 
 ```bash
-python scripts/gerar_pauta.py --ics caminho/da/agenda.ics \
-    --inicio 2026-07-20 --fim 2026-07-24 \
-    --saida pautas/pauta_semana.xlsx
+python scripts/gerar_pauta.py --inicio 2026-07-20 --fim 2026-07-24 --saida pautas/pauta_semana.xlsx
+```
+
+Ou apontando explicitamente para um `.ics` (local ou URL), sem depender do `.env`:
+
+```bash
+python scripts/gerar_pauta.py --ics caminho/da/agenda.ics --inicio 2026-07-20 --fim 2026-07-24
 ```
 
 Se `--inicio`/`--fim` forem omitidos, é usada a semana atual (segunda a domingo).
@@ -75,7 +105,7 @@ Se `--inicio`/`--fim` forem omitidos, é usada a semana atual (segunda a domingo
 Para também enviar por e-mail e gerar o link do WhatsApp:
 
 ```bash
-python scripts/gerar_pauta.py --ics caminho/da/agenda.ics --email --whatsapp
+python scripts/gerar_pauta.py --email --whatsapp
 ```
 
 O envio de e-mail requer as variáveis `SMTP_*` e `PAUTACF_DESTINATARIOS` no `.env`.
@@ -84,8 +114,9 @@ para enviar a mensagem pronta pelo WhatsApp Web ou app.
 
 ## Uso — painel web
 
+Com `PAUTACF_ICS_URL` (ou `PAUTACF_ICS`) já configurado no `.env`:
+
 ```bash
-set PAUTACF_ICS=caminho\da\agenda.ics   # Windows (cmd)
 python web/app.py
 ```
 
@@ -121,8 +152,12 @@ tests/
 
 ## Roadmap
 
-- [ ] Integração direta com a API do Google Calendar / Microsoft Graph (hoje é feito
-      via exportação manual do `.ics`).
+- [x] Integração ao vivo com um feed .ics público do Google Agenda (sem exportação
+      manual) — feita via `PAUTACF_ICS_URL`.
+- [ ] Migrar para a API autenticada do Google Calendar / Microsoft Graph: o feed
+      público não expõe organizador/convidados, então a coluna RESPONSÁVEL não pode
+      ser preenchida automaticamente hoje (fica como lista suspensa para
+      preenchimento manual).
 - [ ] Envio automático via WhatsApp Business API (hoje é gerado apenas o link
       `wa.me` com a mensagem pronta, pois a API oficial exige aprovação de conta
       comercial).

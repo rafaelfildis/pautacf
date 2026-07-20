@@ -6,10 +6,13 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 
-from .config import NOME_ESCRITORIO, SUBTITULO_PAUTA
+from .config import EQUIPE, NOME_ESCRITORIO, SUBTITULO_PAUTA
 from .models import Audiencia
+
+STATUS_OPCOES = ["Em andamento", "CONFIRMADA", "CANCELADA", "REDESIGNADA", "ADIADA", "REALIZADA"]
 
 COLUNAS = [
     "DATA",
@@ -165,7 +168,22 @@ def gerar_pauta_excel(
             )
         linha += 1
 
+    linha_final = linha - 1
+    if linha_final >= linha_cabecalho + 1:
+        _adicionar_dropdown(ws, "G", linha_cabecalho + 1, linha_final, EQUIPE)
+        _adicionar_dropdown(ws, "H", linha_cabecalho + 1, linha_final, STATUS_OPCOES)
+
     caminho_saida = Path(caminho_saida)
     caminho_saida.parent.mkdir(parents=True, exist_ok=True)
     wb.save(caminho_saida)
     return caminho_saida
+
+
+def _adicionar_dropdown(
+    ws: Worksheet, coluna: str, linha_ini: int, linha_fim: int, opcoes: list[str]
+) -> None:
+    """Adiciona uma lista suspensa (RESPONSÁVEL/STATUS) para facilitar o preenchimento manual."""
+    formula = '"' + ",".join(opcoes) + '"'
+    dv = DataValidation(type="list", formula1=formula, allow_blank=True)
+    ws.add_data_validation(dv)
+    dv.add(f"{coluna}{linha_ini}:{coluna}{linha_fim}")

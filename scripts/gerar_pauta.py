@@ -7,18 +7,25 @@ Exemplos de uso:
         --inicio 2026-07-20 --fim 2026-07-24 \
         --saida pautas/pauta_20260720.xlsx
 
-    # Também enviar por e-mail e imprimir o link do WhatsApp:
-    python scripts/gerar_pauta.py --ics data/entrada/agenda.ics \
-        --inicio 2026-07-20 --fim 2026-07-24 \
-        --saida pautas/pauta_20260720.xlsx --email --whatsapp
+    # Direto de um feed .ics público (ex.: URL "iCal" do Google Agenda):
+    python scripts/gerar_pauta.py --ics "https://calendar.google.com/calendar/ical/.../public/basic.ics"
+
+    # Sem --ics, usa PAUTACF_ICS_URL (ou PAUTACF_ICS) do .env. Também enviar por
+    # e-mail e imprimir o link do WhatsApp:
+    python scripts/gerar_pauta.py --email --whatsapp
 """
 
 import argparse
+import os
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from pautacf.config import config_email
 from pautacf.excel_export import gerar_pauta_excel
@@ -35,8 +42,16 @@ def main() -> None:
     inicio_semana = hoje - timedelta(days=hoje.weekday())
     fim_semana = inicio_semana + timedelta(days=6)
 
+    ics_padrao = os.environ.get("PAUTACF_ICS_URL") or os.environ.get("PAUTACF_ICS")
+
     parser = argparse.ArgumentParser(description="Gera a pauta de audiências semanal.")
-    parser.add_argument("--ics", required=True, help="Caminho do arquivo .ics exportado do calendário")
+    parser.add_argument(
+        "--ics",
+        required=ics_padrao is None,
+        default=ics_padrao,
+        help="Caminho do .ics local ou URL de um feed .ics público. "
+        "Se omitido, usa PAUTACF_ICS_URL/PAUTACF_ICS do .env.",
+    )
     parser.add_argument("--inicio", type=_data, default=inicio_semana, help="Data inicial (AAAA-MM-DD)")
     parser.add_argument("--fim", type=_data, default=fim_semana, help="Data final (AAAA-MM-DD)")
     parser.add_argument("--saida", default=None, help="Caminho do .xlsx de saída")

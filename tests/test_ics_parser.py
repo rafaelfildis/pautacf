@@ -8,8 +8,8 @@ CAMINHO_EXEMPLO = Path(__file__).resolve().parent.parent / "data" / "exemplos" /
 
 def test_extrai_apenas_audiencias():
     audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
-    # A reunião interna (evento 4) não deve ser extraída.
-    assert len(audiencias) == 3
+    # A reunião interna e o prazo processual (evento de dia inteiro) não devem ser extraídos.
+    assert len(audiencias) == 5
 
 
 def test_campos_estruturados_sao_extraidos_corretamente():
@@ -41,3 +41,28 @@ def test_filtrar_por_periodo():
     filtradas = filtrar_por_periodo(audiencias, date(2026, 7, 20), date(2026, 7, 20))
     assert len(filtradas) == 2
     assert all(a.data == date(2026, 7, 20) for a in filtradas)
+
+
+def test_numero_de_processo_sem_pontuacao_e_formatado():
+    audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
+    carlos = [a for a in audiencias if a.parte_autora == "Carlos Teste Souza"][0]
+    assert carlos.numero_processo == "0098765-43.2026.8.05.0001"
+
+
+def test_vara_extraida_da_linha_foro():
+    audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
+    carlos = [a for a in audiencias if a.parte_autora == "Carlos Teste Souza"][0]
+    assert carlos.vara == "5ª Vara Cível de Exemplo"
+
+
+def test_evento_de_dia_inteiro_com_processo_e_ignorado():
+    audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
+    numeros = [a.numero_processo for a in audiencias]
+    assert "0004567-89.2026.8.05.9999" not in numeros
+
+
+def test_numero_de_processo_repetido_no_titulo_e_removido_do_nome_da_parte():
+    audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
+    ana = [a for a in audiencias if a.parte_autora == "Ana Teste"][0]
+    assert ana.parte_re == "Banco Exemplo Tres S.A."
+    assert ana.numero_processo == "0011223-45.2026.8.05.0002"
