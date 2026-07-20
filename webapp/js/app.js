@@ -113,7 +113,8 @@
       if (file) processarArquivo(file);
     });
     dropzone.addEventListener("click", (e) => {
-      if (e.target.id !== "btnSelecionarArquivo") fileInput.click();
+      if (e.target.closest("#btnSelecionarArquivo, #btnImportAgendaEmpty")) return;
+      fileInput.click();
     });
     el("btnSelecionarArquivo").addEventListener("click", () => fileInput.click());
     el("btnImportHeader").addEventListener("click", () => fileInput.click());
@@ -121,6 +122,23 @@
       if (fileInput.files[0]) processarArquivo(fileInput.files[0]);
       fileInput.value = "";
     });
+
+    el("btnImportAgenda").addEventListener("click", () => processarAPI());
+    el("btnImportAgendaEmpty").addEventListener("click", (e) => { e.stopPropagation(); processarAPI(); });
+  }
+
+  function aplicarNovosDados(rows, origemLabel, avisos) {
+    STATE.rows = rows;
+    STATE.meta.arquivoNome = origemLabel;
+    resetarFiltros();
+    popularOpcoesFiltro();
+    el("emptyState").classList.add("d-none");
+    el("dashboard").classList.remove("d-none");
+    el("dashboard").classList.add("fade-in");
+    renderizarTudo();
+
+    const avisoTxt = avisos && avisos.length ? ` (${avisos.join(" ")})` : "";
+    toast(`${origemLabel}: ${rows.length} audiência(s) carregada(s).${avisoTxt}`, "success");
   }
 
   async function processarArquivo(file) {
@@ -129,21 +147,26 @@
       await new Promise((r) => setTimeout(r, 120)); // deixa o spinner aparecer
       const resultado = await PautaExcel.importarArquivo(file);
       if (!resultado.rows.length) throw new Error("Nenhuma audiência válida foi encontrada na planilha.");
-
-      STATE.rows = resultado.rows;
-      STATE.meta.arquivoNome = resultado.arquivoNome;
-      resetarFiltros();
-      popularOpcoesFiltro();
-      el("emptyState").classList.add("d-none");
-      el("dashboard").classList.remove("d-none");
-      el("dashboard").classList.add("fade-in");
-      renderizarTudo();
-
-      const avisoTxt = resultado.avisos.length ? ` (${resultado.avisos.join(" ")})` : "";
-      toast(`Planilha "${file.name}" importada: ${resultado.rows.length} audiência(s).${avisoTxt}`, "success");
+      aplicarNovosDados(resultado.rows, `Planilha "${file.name}"`, resultado.avisos);
     } catch (err) {
       console.error(err);
       toast(err.message || "Falha ao importar a planilha.", "error");
+    } finally {
+      esconderCarregando();
+    }
+  }
+
+  const API_AUDIENCIAS_URL = "http://localhost:5000/api/audiencias";
+
+  async function processarAPI() {
+    mostrarCarregando("Buscando a agenda no servidor local…");
+    try {
+      const resultado = await PautaExcel.importarDeAPI(API_AUDIENCIAS_URL);
+      if (!resultado.rows.length) throw new Error("Nenhuma audiência retornada pela agenda.");
+      aplicarNovosDados(resultado.rows, "Agenda (Google Calendar)", resultado.avisos);
+    } catch (err) {
+      console.error(err);
+      toast(err.message || "Falha ao importar da agenda.", "error");
     } finally {
       esconderCarregando();
     }

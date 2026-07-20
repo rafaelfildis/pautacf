@@ -4,6 +4,10 @@
 Rodar com:  python web/app.py
 Depois abrir http://localhost:5000
 
+Também expõe GET /api/audiencias (JSON, CORS aberto) — é o que o painel
+client-side em webapp/ usa para importar a agenda ao vivo, já que o
+navegador sozinho não pode buscar o feed do Google por CORS.
+
 Fonte do calendário (nessa ordem de prioridade):
   PAUTACF_ICS_URL  — feed .ics público (ex.: URL "iCal" do Google Agenda)
   PAUTACF_ICS      — caminho de um arquivo .ics local
@@ -15,7 +19,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask, render_template, request
+from flask import Flask, jsonify, render_template, request
 
 RAIZ_PROJETO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ_PROJETO / "src"))
@@ -30,6 +34,48 @@ ORIGEM_ICS = os.environ.get("PAUTACF_ICS_URL") or os.environ.get("PAUTACF_ICS")
 if ORIGEM_ICS and not ORIGEM_ICS.startswith(("http://", "https://")):
     ORIGEM_ICS = str(RAIZ_PROJETO / ORIGEM_ICS)
 ORIGEM_ICS = ORIGEM_ICS or str(RAIZ_PROJETO / "data" / "entrada" / "agenda.ics")
+
+
+def _audiencia_para_dict(a) -> dict:
+    """Formato consumido pelo painel client-side em webapp/ (js/app.js)."""
+    link = a.observacoes if a.observacoes.startswith("http") else ""
+    return {
+        "data": a.data.isoformat(),
+        "horario": a.horario_formatado,
+        "horarioMinutos": a.hora_inicio.hour * 60 + a.hora_inicio.minute,
+        "parteAutora": a.parte_autora,
+        "parteRe": a.parte_re,
+        "processo": a.numero_processo,
+        "juizoVara": a.vara,
+        "responsavel": a.responsavel,
+        "status": a.status,
+        "observacoes": "",
+        "link": link,
+    }
+
+
+@app.route("/api/audiencias")
+def api_audiencias():
+    """JSON das audiências da fonte configurada (PAUTACF_ICS_URL/PAUTACF_ICS).
+
+    Usado pelo botão "Importar da Agenda" do painel client-side em webapp/,
+    que roda em outra origem (porta 8000) e não pode buscar o feed do Google
+    diretamente por causa de CORS — este endpoint faz essa busca no servidor
+    (sem essa restrição) e devolve o resultado já pronto em JSON. Só leitura,
+    sem autenticação/credenciais, por isso o CORS aberto é aceitável aqui.
+    """
+    try:
+        audiencias = extrair_audiencias(ORIGEM_ICS)
+    except Exception as exc:
+        resp = jsonify({"erro": f"Não foi possível ler a agenda ({ORIGEM_ICS}): {exc}"})
+        resp.status_code = 502
+    else:
+        resp = jsonify({
+            "audiencias": [_audiencia_para_dict(a) for a in audiencias],
+            "origem": ORIGEM_ICS,
+        })
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
 
 
 @app.route("/")

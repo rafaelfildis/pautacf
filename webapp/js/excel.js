@@ -224,5 +224,64 @@ const PautaExcel = (() => {
     return { rows, colunasDetectadas, avisos, planilhaNome: nomeAba, arquivoNome: file.name };
   }
 
-  return { importarArquivo, normalizar, ALIASES };
+  /**
+   * Constrói uma audiência já enriquecida (cidade/tipo/id) a partir de um item
+   * JSON vindo da API local (ver web/app.py: GET /api/audiencias).
+   */
+  function linhaDeAPI(item, indice) {
+    const data = new Date(`${item.data}T00:00:00`);
+    const row = {
+      data,
+      horario: item.horario || "",
+      horarioMinutos: item.horarioMinutos ?? null,
+      parteAutora: (item.parteAutora || "").toString().trim(),
+      parteRe: (item.parteRe || "").toString().trim(),
+      processo: (item.processo || "").toString().trim(),
+      juizoVara: (item.juizoVara || "").toString().trim(),
+      responsavel: (item.responsavel || "").toString().trim(),
+      status: (item.status || "Em andamento").toString().trim() || "Em andamento",
+      observacoes: (item.observacoes || "").toString().trim(),
+      link: (item.link || "").toString().trim(),
+    };
+    row.cidade = item.cidade || inferirCidade(row);
+    row.tipo = inferirTipo({ ...row, tipo: item.tipo });
+    row.id = gerarId(row, indice);
+    return row;
+  }
+
+  /**
+   * Busca as audiências no endpoint local do backend Python (web/app.py),
+   * que por sua vez lê o feed .ics público configurado em PAUTACF_ICS_URL —
+   * necessário porque o navegador sozinho não pode buscar o feed do Google
+   * diretamente (CORS).
+   */
+  async function importarDeAPI(url) {
+    let resposta;
+    try {
+      resposta = await fetch(url);
+    } catch (err) {
+      throw new Error(
+        `Não foi possível conectar ao servidor local (${url}). Verifique se ele está ` +
+          `rodando: "python web/app.py" na pasta do projeto PAUTA CF.`
+      );
+    }
+    let corpo;
+    try {
+      corpo = await resposta.json();
+    } catch (err) {
+      throw new Error("Resposta inválida do servidor local.");
+    }
+    if (!resposta.ok) {
+      throw new Error(corpo.erro || `Falha ao buscar a agenda (HTTP ${resposta.status}).`);
+    }
+
+    const lista = corpo.audiencias || [];
+    const rows = lista.map(linhaDeAPI).filter((r) => !isNaN(r.data));
+    rows.sort((a, b) => a.data - b.data || (a.horarioMinutos ?? 0) - (b.horarioMinutos ?? 0));
+
+    const avisos = rows.length ? [] : ["Nenhuma audiência retornada pela agenda."];
+    return { rows, avisos, origem: corpo.origem || url };
+  }
+
+  return { importarArquivo, importarDeAPI, normalizar, ALIASES };
 })();
