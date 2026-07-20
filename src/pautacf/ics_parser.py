@@ -126,9 +126,13 @@ def _parse_convencao_estruturada(summary: str) -> Optional[dict]:
 
 
 def _separar_partes(texto: str) -> tuple[str, str]:
-    partes = RE_PARTES.split(texto, maxsplit=1)
-    if len(partes) == 2:
-        return partes[0].strip(), partes[1].strip()
+    """Separa 'autora x ré' pelo separador ' x '. Quando o título repete os nomes
+    (ex.: 'Anderson x Agibank - ANDERSON GUSMÃO x BANCO AGIBANK S.A'), a parte ré é
+    sempre o trecho mais à direita — é o nome "oficial" completo, os do meio são
+    apenas repetição/apelido."""
+    partes = RE_PARTES.split(texto)
+    if len(partes) >= 2:
+        return partes[0].strip(), partes[-1].strip()
     return texto.strip(), ""
 
 

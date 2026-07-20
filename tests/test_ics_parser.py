@@ -9,7 +9,7 @@ CAMINHO_EXEMPLO = Path(__file__).resolve().parent.parent / "data" / "exemplos" /
 def test_extrai_apenas_audiencias():
     audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
     # A reunião interna e o prazo processual (evento de dia inteiro) não devem ser extraídos.
-    assert len(audiencias) == 5
+    assert len(audiencias) == 6
 
 
 def test_campos_estruturados_sao_extraidos_corretamente():
@@ -66,3 +66,9 @@ def test_numero_de_processo_repetido_no_titulo_e_removido_do_nome_da_parte():
     ana = [a for a in audiencias if a.parte_autora == "Ana Teste"][0]
     assert ana.parte_re == "Banco Exemplo Tres S.A."
     assert ana.numero_processo == "0011223-45.2026.8.05.0002"
+
+
+def test_titulo_com_nome_repetido_usa_trecho_mais_a_direita_como_parte_re():
+    audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
+    bruno = [a for a in audiencias if a.parte_autora == "Bruno Teste"][0]
+    assert bruno.parte_re == "BANCO AGIBANK S.A."
