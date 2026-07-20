@@ -5,9 +5,11 @@ audiências em um painel interativo, com a identidade visual do escritório
 **Calmon & Freitas Advogados** (navy `#01152F` + dourado `#E2CFAF`, fonte
 Parkinsans/Inter — extraídos do site oficial do escritório).
 
-Roda 100% no navegador: **sem backend, sem banco de dados**. Os dados existem
-apenas durante a sessão (em memória) e são substituídos a cada nova
-importação.
+Roda 100% no navegador — **sem banco de dados**, dados só existem durante a
+sessão. A importação de Excel é 100% client-side (sem backend). Há também um
+botão **"Importar da Agenda"** que busca direto do Google Calendar; como o
+navegador sozinho não consegue (o Google bloqueia por CORS), esse botão usa o
+backend Python já existente no projeto como ponte local — veja abaixo.
 
 ## Como usar
 
@@ -21,6 +23,22 @@ python -m http.server 8000
 
 Depois acesse `http://localhost:8000` e arraste uma planilha `.xlsx`/`.xls`/`.csv`
 para a área de importação (ou clique para selecionar).
+
+### Importar direto da agenda (Google Calendar)
+
+O botão **"Importar da Agenda"** (ícone de calendário no topo, ou na tela
+inicial) busca as audiências de `http://localhost:5000/api/audiencias` — um
+endpoint JSON adicionado ao painel Flask do projeto (`web/app.py`), que já
+sabe ler o feed `.ics` público configurado em `PAUTACF_ICS_URL` (ver
+`.env`/`.env.example` na raiz do projeto). Para usar, rode em outro terminal:
+
+```bash
+python web/app.py
+```
+
+e deixe rodando enquanto usa o painel. Sem ele, o botão mostra um erro
+explicando que o servidor local precisa estar ativo — a importação de Excel
+continua funcionando normalmente sem esse servidor.
 
 ## Detecção automática de colunas
 

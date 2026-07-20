@@ -20,11 +20,12 @@ público do Google Agenda** (integração ao vivo, sem exportação manual) ou d
 ## Painel web a partir de Excel (`webapp/`)
 
 Além da automação via calendário acima, o repositório também tem uma
-**aplicação web independente** em [`webapp/`](webapp/) que transforma
-qualquer planilha Excel de audiências (gerada por este projeto ou não) em um
-painel interativo — busca em tempo real, filtros, calendário, gráficos e
-exportação em PDF/Excel/CSV/imagem. Roda 100% no navegador, sem backend nem
-banco de dados. Veja [webapp/README.md](webapp/README.md).
+**aplicação web** em [`webapp/`](webapp/) que transforma qualquer planilha
+Excel de audiências (gerada por este projeto ou não) — ou a própria agenda do
+Google Calendar, via o backend Flask acima como ponte — em um painel
+interativo: busca em tempo real, filtros, calendário, gráficos e exportação
+em PDF/Excel/CSV/imagem. A importação de Excel é 100% client-side, sem banco
+de dados. Veja [webapp/README.md](webapp/README.md).
 
 ## Como funciona a extração das audiências
 
