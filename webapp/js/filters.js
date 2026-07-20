@@ -84,6 +84,15 @@ const PautaFilters = (() => {
     return "presencial";
   }
 
+  // O campo "responsavel" pode conter mais de um nome separado por vírgula
+  // (ex.: agenda em que todo o escritório é convidado em toda audiência).
+  function listaResponsaveis(row) {
+    return String(row.responsavel || "")
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean);
+  }
+
   /**
    * state = {
    *   busca, periodoRapido, periodoCustom: {inicio, fim}, dataCalendario,
@@ -118,7 +127,10 @@ const PautaFilters = (() => {
       const set = new Set(valores);
       resultado = resultado.filter((r) => set.has(r[campo]));
     };
-    multi("responsavel", state.responsavel);
+    if (state.responsavel && state.responsavel.length) {
+      const set = new Set(state.responsavel);
+      resultado = resultado.filter((r) => listaResponsaveis(r).some((n) => set.has(n)));
+    }
     multi("juizoVara", state.vara);
     multi("cidade", state.cidade);
     multi("status", state.status);
@@ -156,8 +168,15 @@ const PautaFilters = (() => {
     );
   }
 
+  function valoresUnicosResponsavel(rows) {
+    const set = new Set();
+    rows.forEach((r) => listaResponsaveis(r).forEach((n) => set.add(n)));
+    return Array.from(set).sort((a, b) => normalizarBusca(a).localeCompare(normalizarBusca(b)));
+  }
+
   return {
-    aplicarFiltros, ordenar, valoresUnicos, tribunalDoProcesso, tipoNormalizado,
+    aplicarFiltros, ordenar, valoresUnicos, valoresUnicosResponsavel, listaResponsaveis,
+    tribunalDoProcesso, tipoNormalizado,
     startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays,
     periodoRapido,
   };

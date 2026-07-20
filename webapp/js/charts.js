@@ -26,6 +26,18 @@ const PautaCharts = (() => {
     return mapa;
   }
 
+  // "responsavel" pode ter vários nomes separados por vírgula (agenda em que
+  // todo o escritório é convidado em toda audiência) — conta cada pessoa.
+  function contarPorResponsavel(rows) {
+    const mapa = new Map();
+    rows.forEach((r) => {
+      const nomes = PautaFilters.listaResponsaveis(r);
+      const lista = nomes.length ? nomes : ["Não atribuído"];
+      lista.forEach((n) => mapa.set(n, (mapa.get(n) || 0) + 1));
+    });
+    return mapa;
+  }
+
   function destruir(id) {
     if (instancias[id]) {
       instancias[id].destroy();
@@ -75,9 +87,9 @@ const PautaCharts = (() => {
     });
   }
 
-  function porCampoBarraHorizontal(canvasId, rows, campo, cor = "#01152f") {
+  function porCampoBarraHorizontal(canvasId, rows, campoOuMapa, cor = "#01152f") {
     destruir(canvasId);
-    const mapa = contarPor(rows, campo);
+    const mapa = campoOuMapa instanceof Map ? campoOuMapa : contarPor(rows, campoOuMapa);
     const entradas = Array.from(mapa.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
@@ -115,7 +127,7 @@ const PautaCharts = (() => {
 
   function renderAll(rows) {
     porDia("chartPorDia", rows);
-    porCampoBarraHorizontal("chartPorResponsavel", rows, "responsavel", "#e2cfaf");
+    porCampoBarraHorizontal("chartPorResponsavel", rows, contarPorResponsavel(rows), "#e2cfaf");
     porCampoBarraHorizontal("chartPorComarca", rows, "cidade", "#01152f");
     porCampoPizza("chartPorTipo", rows, "tipo");
     porCampoPizza("chartPorStatus", rows, "status");

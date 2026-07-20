@@ -72,3 +72,9 @@ def test_titulo_com_nome_repetido_usa_trecho_mais_a_direita_como_parte_re():
     audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
     bruno = [a for a in audiencias if a.parte_autora == "Bruno Teste"][0]
     assert bruno.parte_re == "BANCO AGIBANK S.A."
+
+
+def test_responsavel_cai_para_lista_de_convidados_quando_texto_nao_indica_um_so():
+    audiencias = extrair_audiencias(CAMINHO_EXEMPLO)
+    carlos = [a for a in audiencias if a.parte_autora == "Carlos Teste Souza"][0]
+    assert carlos.responsavel == "JOSELTON, RAFAEL, NATHALIA, LARISSA"

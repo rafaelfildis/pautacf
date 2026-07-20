@@ -13,8 +13,11 @@ Se o evento não seguir a convenção acima, o parser tenta heurísticas: númer
 CNJ do processo em qualquer lugar do texto (com ou sem pontuação), separador
 " x " entre as partes no título, uma linha "Foro:"/"Vara:" ou "Cliente:" na
 descrição (padrão comum em feeds de acompanhamento processual), nome de um
-responsável conhecido e link de videoconferência na descrição/local. Campos
-não encontrados ficam em branco para preenchimento manual na planilha gerada.
+responsável conhecido, convidados (ATTENDEE) do evento — se toda a equipe é
+convidada em toda audiência (comum em agendas compartilhadas), a coluna
+RESPONSÁVEL lista todos, em vez de ficar em branco — e link de
+videoconferência na descrição/local. Campos não encontrados ficam em branco
+para preenchimento manual na planilha gerada.
 
 Eventos de dia inteiro (sem horário) são ignorados propositalmente: nos feeds
 de tribunal costumam representar prazos processuais (ex.: "PROTOCOLO - 15
@@ -99,6 +102,25 @@ def _extrair_responsavel(texto: str) -> str:
     return ""
 
 
+def _extrair_responsaveis_convidados(evento) -> str:
+    """Quando não dá pra identificar um único responsável no texto, usa a lista
+    de convidados (ATTENDEE) do evento: se o escritório convida todo mundo em
+    toda audiência (comum em agendas compartilhadas), lista todos os membros da
+    equipe encontrados entre os convidados, em vez de deixar em branco."""
+    convidados = evento.get("attendee")
+    if convidados is None:
+        return ""
+    if not isinstance(convidados, list):
+        convidados = [convidados]
+    texto_convidados = " | ".join(
+        str(c.params.get("CN", "")) for c in convidados if hasattr(c, "params")
+    )
+    encontrados = [
+        nome for nome in EQUIPE if re.search(rf"\b{re.escape(nome)}\b", texto_convidados, re.IGNORECASE)
+    ]
+    return ", ".join(encontrados)
+
+
 def _extrair_link(texto: str) -> str:
     m = RE_LINK.search(texto)
     return m.group(0) if m else ""
@@ -171,8 +193,10 @@ def _evento_para_audiencia(evento) -> Optional[Audiencia]:
         parte_autora = estruturado["parte_autora"]
         parte_re = estruturado["parte_re"]
         vara = estruturado["vara"]
-        responsavel = estruturado["responsavel"] or _extrair_responsavel(
-            texto_completo
+        responsavel = (
+            estruturado["responsavel"]
+            or _extrair_responsavel(texto_completo)
+            or _extrair_responsaveis_convidados(evento)
         )
     else:
         numero_processo = _extrair_numero_processo(texto_completo)
@@ -184,7 +208,7 @@ def _evento_para_audiencia(evento) -> Optional[Audiencia]:
             if m_cliente:
                 parte_autora = m_cliente.group(1).strip()
         vara = _extrair_vara(texto_completo) or str(evento.get("location", "")).strip()
-        responsavel = _extrair_responsavel(texto_completo)
+        responsavel = _extrair_responsavel(texto_completo) or _extrair_responsaveis_convidados(evento)
         parte_autora = _remover_numero_processo_do_nome(parte_autora, numero_processo)
         parte_re = _remover_numero_processo_do_nome(parte_re, numero_processo)
 

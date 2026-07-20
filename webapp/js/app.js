@@ -300,17 +300,19 @@
   }
 
   function popularOpcoesFiltro() {
-    const preencher = (id, campo) => {
+    const preencherComLista = (id, valores) => {
       const select = el(id);
       const anteriores = new Set(Array.from(select.selectedOptions).map((o) => o.value));
       select.innerHTML = "";
-      PautaFilters.valoresUnicos(STATE.rows, campo).forEach((v) => {
+      valores.forEach((v) => {
         const opt = document.createElement("option");
         opt.value = v; opt.textContent = v; opt.selected = anteriores.has(v);
         select.appendChild(opt);
       });
     };
-    preencher("filtroResponsavel", "responsavel");
+    const preencher = (id, campo) => preencherComLista(id, PautaFilters.valoresUnicos(STATE.rows, campo));
+
+    preencherComLista("filtroResponsavel", PautaFilters.valoresUnicosResponsavel(STATE.rows));
     preencher("filtroVara", "juizoVara");
     preencher("filtroCidade", "cidade");
     preencher("filtroStatus", "status");
