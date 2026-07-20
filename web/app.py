@@ -17,17 +17,19 @@ from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, render_template, request
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+RAIZ_PROJETO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(RAIZ_PROJETO / "src"))
 
-load_dotenv()
+load_dotenv(RAIZ_PROJETO / ".env")
 
 from pautacf.ics_parser import extrair_audiencias, filtrar_por_periodo
 
 app = Flask(__name__)
 
-ORIGEM_ICS = os.environ.get("PAUTACF_ICS_URL") or os.environ.get(
-    "PAUTACF_ICS", "data/entrada/agenda.ics"
-)
+ORIGEM_ICS = os.environ.get("PAUTACF_ICS_URL") or os.environ.get("PAUTACF_ICS")
+if ORIGEM_ICS and not ORIGEM_ICS.startswith(("http://", "https://")):
+    ORIGEM_ICS = str(RAIZ_PROJETO / ORIGEM_ICS)
+ORIGEM_ICS = ORIGEM_ICS or str(RAIZ_PROJETO / "data" / "entrada" / "agenda.ics")
 
 
 @app.route("/")
@@ -64,4 +66,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
