@@ -17,6 +17,15 @@ público do Google Agenda** (integração ao vivo, sem exportação manual) ou d
 > e `.xlsx` com dados reais são ignorados pelo Git (veja `.gitignore`) — apenas os
 > exemplos sintéticos em `data/exemplos/` são versionados.
 
+## Painel web a partir de Excel (`webapp/`)
+
+Além da automação via calendário acima, o repositório também tem uma
+**aplicação web independente** em [`webapp/`](webapp/) que transforma
+qualquer planilha Excel de audiências (gerada por este projeto ou não) em um
+painel interativo — busca em tempo real, filtros, calendário, gráficos e
+exportação em PDF/Excel/CSV/imagem. Roda 100% no navegador, sem backend nem
+banco de dados. Veja [webapp/README.md](webapp/README.md).
+
 ## Como funciona a extração das audiências
 
 O parser (`src/pautacf/ics_parser.py`) lê todo evento do `.ics` e considera como

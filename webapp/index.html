@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+<title>PAUTA CF — Painel de Audiências | Calmon &amp; Freitas Advogados</title>
+<meta name="description" content="Painel interativo de audiências — Calmon & Freitas Advogados" />
+<link rel="icon" href="assets/favicon.png" />
+
+<!-- Google Fonts (mesma identidade do site do escritório) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Parkinsans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+<!-- Bootstrap 5 -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" />
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+<!-- DataTables (Bootstrap 5) -->
+<link href="https://cdn.datatables.net/1.13.11/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+
+<link href="css/style.css" rel="stylesheet" />
+</head>
+<body>
+
+<!-- ============================= LOADING OVERLAY ============================= -->
+<div class="loading-overlay d-none" id="loadingOverlay">
+  <div class="spinner-border" role="status"></div>
+  <div id="loadingLabel">Importando planilha…</div>
+</div>
+
+<!-- ============================= TOASTS ============================= -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+<!-- ============================= HEADER ============================= -->
+<header class="app-header">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <img src="assets/logo.png" alt="Calmon & Freitas Advogados" class="logo-mark" />
+      <div>
+        <p class="firm-name">PAUTA CF</p>
+        <div class="firm-tagline">Calmon &amp; Freitas Advogados</div>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <div class="pauta-meta d-none d-md-block me-2">
+        <div class="range" id="metaPeriodo">Nenhuma planilha carregada</div>
+        <span class="total-badge" id="metaTotal">0 audiências</span>
+      </div>
+
+      <button class="icon-btn theme-toggle" id="btnTheme" title="Alternar tema claro/escuro">
+        <i class="fa-solid fa-moon"></i>
+        <i class="fa-solid fa-sun"></i>
+      </button>
+      <button class="icon-btn" id="btnImportHeader" title="Importar planilha (.xlsx)">
+        <i class="fa-solid fa-file-arrow-up"></i>
+      </button>
+      <button class="icon-btn" id="btnPrint" title="Imprimir (Ctrl+P)">
+        <i class="fa-solid fa-print"></i>
+      </button>
+      <div class="dropdown">
+        <button class="btn btn-gold dropdown-toggle" data-bs-toggle="dropdown" id="btnExport">
+          <i class="fa-solid fa-download me-1"></i> Exportar
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+          <li><a class="dropdown-item" href="#" data-export="pdf"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>PDF</a></li>
+          <li><a class="dropdown-item" href="#" data-export="excel"><i class="fa-solid fa-file-excel me-2 text-success"></i>Excel (.xlsx)</a></li>
+          <li><a class="dropdown-item" href="#" data-export="csv"><i class="fa-solid fa-file-csv me-2"></i>CSV</a></li>
+          <li><a class="dropdown-item" href="#" data-export="jpeg"><i class="fa-solid fa-file-image me-2 text-warning"></i>JPEG (imagem)</a></li>
+          <li><a class="dropdown-item" href="#" data-export="png"><i class="fa-solid fa-file-image me-2 text-info"></i>PNG (imagem)</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</header>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="d-none" />
+
+<main class="app-main">
+
+  <!-- ============================= DROPZONE (estado vazio) ============================= -->
+  <div id="emptyState" class="fade-in">
+    <div class="dropzone" id="dropzone">
+      <i class="fa-solid fa-file-excel"></i>
+      <h5>Arraste a planilha de audiências aqui</h5>
+      <p class="mb-3">ou clique para selecionar um arquivo .xlsx / .xls / .csv</p>
+      <button class="btn btn-gold" id="btnSelecionarArquivo"><i class="fa-solid fa-upload me-1"></i> Selecionar planilha</button>
+      <p class="mt-3 mb-0" style="font-size:.78rem;">As colunas são detectadas automaticamente pelo nome do cabeçalho (Data, Horário, Autor, Réu, Processo, Juízo, Responsável, Status, Observações, Link) — em qualquer ordem.</p>
+    </div>
+  </div>
+
+  <!-- ============================= CONTEÚDO PRINCIPAL ============================= -->
+  <div id="dashboard" class="d-none">
+
+    <!-- Cards de resumo -->
+    <div class="summary-cards" id="summaryCards">
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-list-check"></i></div><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total de audiências</div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-calendar-day"></i></div><div class="stat-value" id="statHoje">0</div><div class="stat-label">Audiências hoje</div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-calendar-week"></i></div><div class="stat-value" id="statSemana">0</div><div class="stat-label">Esta semana</div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-calendar"></i></div><div class="stat-value" id="statMes">0</div><div class="stat-label">Este mês</div></div>
+      <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div><div class="stat-value" id="statProxima" style="font-size:1.05rem;">—</div><div class="stat-label">Próxima audiência</div></div>
+    </div>
+
+    <!-- Busca + filtros rápidos -->
+    <div class="surface toolbar">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" class="form-control" id="searchInput" placeholder="Pesquisar por cliente, réu, processo, vara, responsável, observações… (Ctrl+F)" />
+      </div>
+      <div class="quick-filters" id="quickFilters">
+        <button class="quick-filter-btn active" data-periodo="todos">Todos</button>
+        <button class="quick-filter-btn" data-periodo="hoje">Hoje</button>
+        <button class="quick-filter-btn" data-periodo="amanha">Amanhã</button>
+        <button class="quick-filter-btn" data-periodo="semana">Esta Semana</button>
+        <button class="quick-filter-btn" data-periodo="proxima-semana">Próxima Semana</button>
+        <button class="quick-filter-btn" data-periodo="mes">Este Mês</button>
+        <button class="quick-filter-btn" data-periodo="proximo-mes">Próximo Mês</button>
+        <button class="quick-filter-btn" data-bs-toggle="collapse" data-bs-target="#periodoCustomBox">
+          <i class="fa-regular fa-calendar-days me-1"></i>Período Personalizado
+        </button>
+        <button class="quick-filter-btn ms-auto" id="btnLimparFiltros"><i class="fa-solid fa-eraser me-1"></i>Limpar filtros</button>
+      </div>
+      <div class="collapse mt-3" id="periodoCustomBox">
+        <div class="d-flex flex-wrap align-items-end gap-2">
+          <div><label class="filter-section-label mb-1">De</label><input type="date" class="form-control" id="periodoInicio" /></div>
+          <div><label class="filter-section-label mb-1">Até</label><input type="date" class="form-control" id="periodoFim" /></div>
+          <button class="btn btn-gold-outline" id="btnAplicarPeriodo">Aplicar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <!-- Coluna lateral: calendário + filtros avançados -->
+      <div class="col-lg-3">
+        <div class="surface calendar-card mb-3">
+          <div class="calendar-head">
+            <button class="icon-btn" id="calPrev" style="width:32px;height:32px;"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="month-label" id="calMonthLabel">—</span>
+            <button class="icon-btn" id="calNext" style="width:32px;height:32px;"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <button class="btn btn-gold-outline btn-sm w-100 mt-2 d-none" id="btnLimparDataCalendario">
+            <i class="fa-solid fa-xmark me-1"></i>Limpar seleção de data
+          </button>
+        </div>
+
+        <div class="surface p-3">
+          <h6 class="brand-font mb-0"><i class="fa-solid fa-sliders me-2"></i>Filtros avançados</h6>
+
+          <div class="filter-section-label">Responsável</div>
+          <select class="form-select form-select-sm" id="filtroResponsavel" multiple size="3"></select>
+
+          <div class="filter-section-label">Vara / Juízo</div>
+          <select class="form-select form-select-sm" id="filtroVara" multiple size="3"></select>
+
+          <div class="filter-section-label">Cidade</div>
+          <select class="form-select form-select-sm" id="filtroCidade" multiple size="3"></select>
+
+          <div class="filter-section-label">Tribunal</div>
+          <select class="form-select form-select-sm" id="filtroTribunal" multiple size="3"></select>
+
+          <div class="filter-section-label">Status</div>
+          <select class="form-select form-select-sm" id="filtroStatus" multiple size="3"></select>
+
+          <div class="filter-section-label">Modalidade</div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="online" id="modOnline">
+            <label class="form-check-label" for="modOnline">Audiências Online</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="presencial" id="modPresencial">
+            <label class="form-check-label" for="modPresencial">Audiências Presenciais</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" value="hibrida" id="modHibrida">
+            <label class="form-check-label" for="modHibrida">Audiências Híbridas</label>
+          </div>
+
+          <div class="filter-section-label">Ordenar por</div>
+          <select class="form-select form-select-sm" id="ordenarPor">
+            <option value="data-asc">Data (crescente)</option>
+            <option value="data-desc">Data (decrescente)</option>
+            <option value="horario-asc">Horário</option>
+            <option value="cliente-asc">Cliente (A-Z)</option>
+            <option value="responsavel-asc">Responsável (A-Z)</option>
+            <option value="cidade-asc">Cidade (A-Z)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Coluna principal: tabela -->
+      <div class="col-lg-9">
+        <div class="surface table-card">
+          <div class="table-toolbar">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fa-solid fa-table-list text-secondary"></i>
+              <strong id="tabelaContagem">0 audiências</strong>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="dropdown">
+                <button class="btn btn-gold-outline btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="fa-solid fa-eye me-1"></i>Colunas</button>
+                <div class="dropdown-menu p-2 col-menu" id="colMenu"></div>
+              </div>
+              <button class="btn btn-gold-outline btn-sm" id="btnSnapshotImg" title="Salvar como imagem">
+                <i class="fa-solid fa-camera me-1"></i>Salvar como Imagem
+              </button>
+            </div>
+          </div>
+          <div id="tableSnapshotArea">
+            <div class="table-responsive-wrapper" style="overflow-x:auto;">
+              <table id="pautaTable" class="table w-100" style="width:100%"></table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Indicadores -->
+        <div class="indicators-grid" id="indicatorsGrid"></div>
+
+        <!-- Gráficos -->
+        <div class="charts-grid">
+          <div class="surface chart-card"><h6>Audiências por dia</h6><canvas id="chartPorDia"></canvas></div>
+          <div class="surface chart-card"><h6>Audiências por responsável</h6><canvas id="chartPorResponsavel"></canvas></div>
+          <div class="surface chart-card"><h6>Audiências por comarca</h6><canvas id="chartPorComarca"></canvas></div>
+          <div class="surface chart-card"><h6>Audiências por tipo</h6><canvas id="chartPorTipo"></canvas></div>
+          <div class="surface chart-card" style="grid-column:1/-1;max-width:480px;margin:0 auto;width:100%;"><h6>Audiências por status</h6><canvas id="chartPorStatus"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============================= OFFCANVAS: DETALHE DA AUDIÊNCIA ============================= -->
+<div class="offcanvas offcanvas-end pauta-detail" tabindex="-1" id="detailPanel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title"><i class="fa-solid fa-gavel me-2"></i>Detalhes da Audiência</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body" id="detailBody"></div>
+</div>
+
+<!-- ============================= ÁREA DE IMPRESSÃO ============================= -->
+<div id="printArea"></div>
+
+<!-- ============================= SCRIPTS ============================= -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.11/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.11/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script src="js/excel.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
