@@ -1,0 +1,5 @@
+icalendar==6.1.0
+openpyxl==3.1.5
+python-dotenv==1.0.1
+Flask==3.0.3
+pytest==8.3.3

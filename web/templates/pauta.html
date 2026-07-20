@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Pauta de Audiências — Calmon &amp; Freitas</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 2rem; background: #f4f6fb; color: #1f3864; }
+    h1 { color: #1f3864; }
+    .periodo { color: #555; margin-bottom: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    th { background: #1f3864; color: white; padding: .6rem; text-align: left; font-size: .85rem; }
+    td { padding: .6rem; border-bottom: 1px solid #e0e0e0; font-size: .85rem; vertical-align: top; }
+    tr:nth-child(even) td { background: #f2f2f2; }
+    .erro { background: #fdecea; color: #611a15; padding: 1rem; border-radius: 4px; }
+    .vazio { padding: 1rem; color: #777; }
+    .status-cancelada { color: #b00020; font-weight: bold; }
+    .status-redesignada { color: #b26a00; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>PAUTA DE AUDIÊNCIAS</h1>
+  <div class="periodo">CALMON &amp; FREITAS ADVOGADOS — {{ inicio.strftime('%d/%m/%Y') }} a {{ fim.strftime('%d/%m/%Y') }} — Total: {{ audiencias|length }}</div>
+
+  {% if erro %}
+    <div class="erro">{{ erro }}</div>
+  {% elif not audiencias %}
+    <div class="vazio">Nenhuma audiência encontrada para este período.</div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th><th>Horário</th><th>Parte Autora</th><th>Parte Ré</th>
+        <th>Processo</th><th>Juízo / Vara</th><th>Responsável</th><th>Status</th><th>Observações / Link</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in audiencias %}
+      <tr>
+        <td>{{ a.data_formatada }}</td>
+        <td>{{ a.horario_formatado }}</td>
+        <td>{{ a.parte_autora }}</td>
+        <td>{{ a.parte_re }}</td>
+        <td>{{ a.numero_processo }}</td>
+        <td>{{ a.vara }}</td>
+        <td>{{ a.responsavel }}</td>
+        <td class="status-{{ a.status|lower }}">{{ a.status }}</td>
+        <td>{% if a.observacoes.startswith('http') %}<a href="{{ a.observacoes }}" target="_blank">link</a>{% else %}{{ a.observacoes }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</body>
+</html>
