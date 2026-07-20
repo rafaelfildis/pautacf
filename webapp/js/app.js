@@ -16,7 +16,12 @@
     responsavel: [], vara: [], cidade: [], tribunal: [], status: [], tipo: [],
     ordenarPor: "data", ordenarDir: "asc",
     meta: { arquivoNome: "" },
+    origem: null, // 'excel' | 'agenda'
+    ultimaAtualizacao: null,
   };
+
+  const INTERVALO_AUTO_ATUALIZACAO_MS = 5 * 60 * 1000; // 5 minutos
+  let timerAutoAtualizacao = null;
 
   let table = null;
   const $ = window.jQuery;
@@ -127,18 +132,36 @@
     el("btnImportAgendaEmpty").addEventListener("click", (e) => { e.stopPropagation(); processarAPI(); });
   }
 
-  function aplicarNovosDados(rows, origemLabel, avisos) {
+  function aplicarNovosDados(rows, origemLabel, avisos, origemTipo) {
     STATE.rows = rows;
     STATE.meta.arquivoNome = origemLabel;
+    STATE.origem = origemTipo;
+    STATE.ultimaAtualizacao = new Date();
     resetarFiltros();
     popularOpcoesFiltro();
     el("emptyState").classList.add("d-none");
     el("dashboard").classList.remove("d-none");
     el("dashboard").classList.add("fade-in");
     renderizarTudo();
+    renderizarIndicadorAtualizacao();
+
+    if (origemTipo === "agenda") iniciarAutoAtualizacao();
+    else pararAutoAtualizacao();
 
     const avisoTxt = avisos && avisos.length ? ` (${avisos.join(" ")})` : "";
-    toast(`${origemLabel}: ${rows.length} audiência(s) carregada(s).${avisoTxt}`, "success");
+    return { avisoTxt };
+  }
+
+  function renderizarIndicadorAtualizacao() {
+    const box = el("syncStatus");
+    if (!box) return;
+    if (STATE.origem !== "agenda" || !STATE.ultimaAtualizacao) {
+      box.classList.add("d-none");
+      return;
+    }
+    box.classList.remove("d-none");
+    const hora = STATE.ultimaAtualizacao.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    el("syncStatusLabel").textContent = `Sincronizado às ${hora}`;
   }
 
   async function processarArquivo(file) {
@@ -147,7 +170,8 @@
       await new Promise((r) => setTimeout(r, 120)); // deixa o spinner aparecer
       const resultado = await PautaExcel.importarArquivo(file);
       if (!resultado.rows.length) throw new Error("Nenhuma audiência válida foi encontrada na planilha.");
-      aplicarNovosDados(resultado.rows, `Planilha "${file.name}"`, resultado.avisos);
+      const { avisoTxt } = aplicarNovosDados(resultado.rows, `Planilha "${file.name}"`, resultado.avisos, "excel");
+      toast(`Planilha "${file.name}" importada: ${resultado.rows.length} audiência(s).${avisoTxt}`, "success");
     } catch (err) {
       console.error(err);
       toast(err.message || "Falha ao importar a planilha.", "error");
@@ -158,17 +182,42 @@
 
   const API_AUDIENCIAS_URL = "http://localhost:5000/api/audiencias";
 
-  async function processarAPI() {
-    mostrarCarregando("Buscando a agenda no servidor local…");
+  /**
+   * @param {{silencioso?: boolean, comToastSucesso?: boolean}} opts
+   *   silencioso: não mostra overlay de carregamento nem toast de erro (usado
+   *   na tentativa automática ao abrir e nas atualizações periódicas).
+   */
+  async function processarAPI(opts = {}) {
+    const { silencioso = false, comToastSucesso = true } = opts;
+    if (!silencioso) mostrarCarregando("Buscando a agenda no servidor local…");
     try {
       const resultado = await PautaExcel.importarDeAPI(API_AUDIENCIAS_URL);
       if (!resultado.rows.length) throw new Error("Nenhuma audiência retornada pela agenda.");
-      aplicarNovosDados(resultado.rows, "Agenda (Google Calendar)", resultado.avisos);
+      const { avisoTxt } = aplicarNovosDados(resultado.rows, "Agenda (Google Calendar)", resultado.avisos, "agenda");
+      if (comToastSucesso) {
+        toast(`Agenda sincronizada: ${resultado.rows.length} audiência(s).${avisoTxt}`, "success");
+      }
+      return true;
     } catch (err) {
-      console.error(err);
-      toast(err.message || "Falha ao importar da agenda.", "error");
+      console.warn("[PAUTA CF] Falha ao importar da agenda:", err.message);
+      if (!silencioso) toast(err.message || "Falha ao importar da agenda.", "error");
+      return false;
     } finally {
-      esconderCarregando();
+      if (!silencioso) esconderCarregando();
+    }
+  }
+
+  function iniciarAutoAtualizacao() {
+    pararAutoAtualizacao();
+    timerAutoAtualizacao = setInterval(() => {
+      processarAPI({ silencioso: true, comToastSucesso: false });
+    }, INTERVALO_AUTO_ATUALIZACAO_MS);
+  }
+
+  function pararAutoAtualizacao() {
+    if (timerAutoAtualizacao) {
+      clearInterval(timerAutoAtualizacao);
+      timerAutoAtualizacao = null;
     }
   }
 
@@ -649,6 +698,12 @@
 
   /* ----------------------------- Init ----------------------------- */
 
+  function initSync() {
+    const btn = el("btnSyncAgora");
+    if (btn) btn.addEventListener("click", () => processarAPI());
+    window.addEventListener("beforeunload", pararAutoAtualizacao);
+  }
+
   function init() {
     initTema();
     initImportacao();
@@ -657,7 +712,11 @@
     initCalendarioNav();
     initExportacao();
     initAtalhos();
+    initSync();
     renderizarCalendario();
+    // Tenta buscar a agenda automaticamente ao abrir; se o backend local não
+    // estiver rodando, falha em silêncio e mostra a tela de importação manual.
+    processarAPI({ silencioso: true, comToastSucesso: true });
   }
 
   document.addEventListener("DOMContentLoaded", init);

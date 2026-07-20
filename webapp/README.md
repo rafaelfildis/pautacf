@@ -26,19 +26,25 @@ para a área de importação (ou clique para selecionar).
 
 ### Importar direto da agenda (Google Calendar)
 
-O botão **"Importar da Agenda"** (ícone de calendário no topo, ou na tela
-inicial) busca as audiências de `http://localhost:5000/api/audiencias` — um
-endpoint JSON adicionado ao painel Flask do projeto (`web/app.py`), que já
-sabe ler o feed `.ics` público configurado em `PAUTACF_ICS_URL` (ver
-`.env`/`.env.example` na raiz do projeto). Para usar, rode em outro terminal:
+O painel busca a agenda **automaticamente ao abrir a página** — sem precisar
+clicar em nada — em `http://localhost:5000/api/audiencias`, um endpoint JSON
+adicionado ao Flask do projeto (`web/app.py`), que já sabe ler o feed `.ics`
+público configurado em `PAUTACF_ICS_URL` (ver `.env`/`.env.example` na raiz).
+Para isso funcionar, rode em outro terminal, antes de abrir o painel:
 
 ```bash
 python web/app.py
 ```
 
-e deixe rodando enquanto usa o painel. Sem ele, o botão mostra um erro
-explicando que o servidor local precisa estar ativo — a importação de Excel
-continua funcionando normalmente sem esse servidor.
+Se esse servidor não estiver rodando, a tentativa automática falha em
+silêncio (sem alarme) e o painel volta para a tela de importação manual de
+planilha — que continua funcionando 100% no navegador, sem depender dele.
+
+Quando os dados vêm da agenda, o painel se **atualiza sozinho a cada 5
+minutos** (indicador "Sincronizado às HH:MM" no cabeçalho, com botão de
+atualizar na hora ao lado). Ao importar uma planilha Excel manualmente, a
+atualização automática é desligada — a planilha importada é o dado "oficial"
+até você importar outra coisa.
 
 ## Detecção automática de colunas
 
