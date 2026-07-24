@@ -605,6 +605,118 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
 
 .etiqueta button:hover { color: var(--erro); }
 
+/* ================= modal de exportação ================= */
+
+.modal--largo { width: min(880px, 94vw); }
+
+.exp-resumo {
+  margin: 0;
+  padding: 9px 13px;
+  border-radius: var(--raio-pequeno);
+  background: rgba(201, 169, 97, 0.1);
+  border: 1px solid rgba(201, 169, 97, 0.28);
+  color: var(--ouro-300);
+  font-size: 13px;
+}
+
+.exp-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px;
+}
+
+.exp-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 13px;
+  color: var(--prata-300);
+}
+
+.exp-opcoes label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.exp-opcoes input { accent-color: var(--ouro-500); width: 15px; height: 15px; }
+
+.modal__rodape--espalhado { justify-content: space-between; flex-wrap: wrap; }
+.modal__rodape-grupo { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ================= pré-visualização ================= */
+
+.modal--previa { width: min(1180px, 96vw); }
+
+.previa-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 18px;
+  border-bottom: 1px solid rgba(168, 176, 189, 0.16);
+}
+
+.previa-larguras { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.btn--mini { padding: 6px 11px; font-size: 12px; }
+.btn--mini.ativo {
+  border-color: var(--ouro-500);
+  color: var(--marinho-900);
+  background: linear-gradient(180deg, var(--ouro-500), var(--ouro-600));
+}
+
+.previa-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+
+.previa-palco {
+  padding: 20px;
+  overflow: auto;
+  max-height: 72vh;
+  display: flex;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.015) 0 10px, transparent 10px 20px),
+    var(--marinho-900);
+}
+
+/* Moldura de aparelho — recurso de prévia, nunca entra no documento. */
+.previa-moldura {
+  position: relative;
+  border: 10px solid #1b2740;
+  border-radius: 30px;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  flex-shrink: 0;
+  height: 720px;
+}
+
+.previa-moldura__notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44%;
+  height: 20px;
+  background: #1b2740;
+  border-radius: 0 0 12px 12px;
+  z-index: 2;
+}
+
+.previa-folha {
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 1100px;
+  height: 70vh;
+}
+
+.previa-iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+
+@media (max-width: 640px) {
+  .previa-palco { padding: 10px; max-height: 66vh; }
+  .previa-moldura { height: 60vh; transform-origin: top center; }
+  .previa-acoes { margin-left: 0; width: 100%; }
+  .previa-acoes .btn { flex: 1 1 auto; justify-content: center; }
+}
+
 #saidaTexto {
   width: 100%;
   font-family: "Consolas", "SF Mono", ui-monospace, monospace;

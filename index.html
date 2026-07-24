@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PAUTA CF — Calmon &amp; Freitas Advogados</title>
-<meta name="description" content="Acompanhamento e extração da pauta de audiências e tarefas do escritório Calmon &amp; Freitas Advogados.">
-<meta name="theme-color" content="#0d1b34">
+<title>PAUTA DE AUDIÊNCIAS CALMON E FREITAS ADVOGADOS</title>
+<meta name="description" content="Acompanhamento e extração da pauta de audiências e prazos do escritório Calmon e Freitas Advogados.">
+<meta name="theme-color" content="#07162e">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="assets/img/favicon.png">
 <link rel="stylesheet" href="assets/css/styles.css">
@@ -17,8 +17,8 @@
     <img class="logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
     <span class="topo__divisor" aria-hidden="true"></span>
     <div class="topo__texto">
-      <h1>PAUTA <span>CF</span></h1>
-      <p>Audiências e prazos</p>
+      <h1>PAUTA DE AUDIÊNCIAS</h1>
+      <p>Calmon e Freitas Advogados</p>
     </div>
   </div>
 
@@ -120,9 +120,14 @@
       <span id="exportarSubtitulo">—</span>
     </div>
     <div class="exportar__botoes">
-      <button class="btn btn--escuro" id="btnPdf" type="button">Exportar PDF</button>
-      <button class="btn btn--escuro" id="btnJpeg" type="button">Exportar JPEG</button>
+      <button class="btn btn--escuro" id="btnPdfCompleto" type="button">PDF completo</button>
+      <button class="btn btn--escuro" id="btnPdfMobile" type="button">PDF MOBILE</button>
+      <button class="btn btn--escuro" id="btnImprimirCompleto" type="button">Imprimir completo</button>
+      <button class="btn btn--escuro" id="btnImprimirMobile" type="button">Imprimir MOBILE</button>
+      <button class="btn btn--escuro" id="btnJpeg" type="button">JPEG</button>
       <button class="btn btn--escuro" id="btnTexto" type="button">Versão escrita</button>
+      <button class="btn btn--fantasma" id="btnPreviaRapida" type="button">Prévia</button>
+      <button class="btn btn--ouro" id="btnAbrirExportacao" type="button">Exportar…</button>
     </div>
   </section>
 
@@ -190,6 +195,131 @@
       <button class="btn btn--ouro" value="ok" type="submit">Concluir</button>
     </footer>
   </form>
+</dialog>
+
+<!-- ---------- Modal: configurações de exportação ---------- -->
+<dialog class="modal modal--largo" id="modalExportar">
+  <form method="dialog" class="modal__conteudo">
+    <header class="modal__topo">
+      <h2>Exportar pauta</h2>
+      <button class="modal__fechar" value="cancelar" aria-label="Fechar">×</button>
+    </header>
+
+    <div class="modal__corpo">
+      <p class="exp-resumo" id="expResumo">—</p>
+
+      <div class="exp-grade">
+        <label class="bloco">
+          <span class="bloco__titulo">Formato</span>
+          <select id="expFormato">
+            <option value="pdf-completo">PDF completo</option>
+            <option value="pdf-mobile">PDF MOBILE</option>
+            <option value="imprimir-completo">Impressão completa</option>
+            <option value="imprimir-mobile">Impressão MOBILE</option>
+            <option value="jpeg">JPEG</option>
+            <option value="texto">Versão escrita</option>
+          </select>
+        </label>
+
+        <label class="bloco" id="linhaOrientacao">
+          <span class="bloco__titulo">Orientação</span>
+          <select id="expOrientacao">
+            <option value="paisagem">Paisagem</option>
+            <option value="retrato">Retrato</option>
+            <option value="auto">Automática</option>
+          </select>
+        </label>
+
+        <label class="bloco" id="linhaPapel">
+          <span class="bloco__titulo">Papel da impressão</span>
+          <select id="expPapel">
+            <option value="">Automático</option>
+            <option value="a4-retrato">A4 retrato</option>
+            <option value="a4-paisagem">A4 paisagem</option>
+            <option value="carta-retrato">Carta retrato</option>
+            <option value="mobile">MOBILE vertical</option>
+          </select>
+        </label>
+
+        <label class="bloco" id="linhaVisualizacao">
+          <span class="bloco__titulo">Tipo de visualização</span>
+          <select id="expVisualizacao">
+            <option value="computador">Computador</option>
+            <option value="impressao">Impressão tradicional</option>
+            <option value="celular">Celular</option>
+            <option value="whatsapp">WhatsApp</option>
+          </select>
+        </label>
+
+        <label class="bloco">
+          <span class="bloco__titulo">Agrupamento</span>
+          <select id="expAgrupamento">
+            <option value="data">Por data</option>
+            <option value="responsavel">Por responsável</option>
+            <option value="cidade">Por cidade</option>
+            <option value="cliente">Por cliente</option>
+          </select>
+        </label>
+
+        <label class="bloco">
+          <span class="bloco__titulo">CPF e CNPJ</span>
+          <select id="expDocumentos">
+            <option value="exibir">Exibir integralmente</option>
+            <option value="mascarar">Exibir mascarado</option>
+            <option value="ocultar">Ocultar</option>
+          </select>
+        </label>
+
+        <label class="bloco">
+          <span class="bloco__titulo">Conteúdo</span>
+          <select id="expConteudo">
+            <option value="">Usar filtro atual da tela</option>
+            <option value="audiencias">Apenas audiências</option>
+            <option value="audiencias+prazos">Audiências e prazos</option>
+          </select>
+        </label>
+
+        <label class="bloco" id="linhaIndividualizar">
+          <span class="bloco__titulo">Documentos individualizados</span>
+          <select id="expIndividualizar">
+            <option value="">Documento único</option>
+            <option value="responsavel">Um para cada responsável</option>
+            <option value="cliente">Um para cada cliente</option>
+            <option value="data">Um para cada data</option>
+            <option value="cidade">Um para cada cidade</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="bloco">
+        <span class="bloco__titulo">Dados</span>
+        <div class="exp-opcoes">
+          <label><input type="checkbox" id="expLinks" checked> Exibir links de acesso</label>
+          <label><input type="checkbox" id="expSemResp" checked> Exibir registros sem responsável</label>
+        </div>
+      </div>
+    </div>
+
+    <footer class="modal__rodape modal__rodape--espalhado">
+      <div class="modal__rodape-grupo">
+        <button class="btn btn--fantasma" id="btnPreviaCompleta" type="button">Prévia completa</button>
+        <button class="btn btn--fantasma" id="btnPreviaMobile" type="button">Prévia MOBILE</button>
+      </div>
+      <button class="btn btn--ouro" id="btnExportarConfirmar" type="button">Gerar documento</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- ---------- Modal: pré-visualização ---------- -->
+<dialog class="modal modal--previa" id="modalPrevia">
+  <div class="modal__conteudo">
+    <header class="modal__topo">
+      <h2 id="previaTitulo">Prévia</h2>
+      <button class="modal__fechar" id="fecharPrevia" aria-label="Fechar">×</button>
+    </header>
+    <div class="previa-barra" id="previaControles"></div>
+    <div class="previa-palco" id="previaPalco"></div>
+  </div>
 </dialog>
 
 <!-- ---------- Modal: versão escrita ---------- -->

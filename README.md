@@ -37,8 +37,12 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 - **Modalidade, cidade e link editáveis** — o Astrea não fornece esses campos de forma
   padronizada, então a cidade é deduzida do foro, a modalidade já vem como *Virtual*
   (troque nas exceções) e o link é extraído do texto quando existe.
-- **Exportação** em PDF (A4 paisagem, paginado), JPEG (imagem única) e versão escrita
-  pronta para e-mail ou WhatsApp.
+- **Seis formatos de saída**, cada um com documento próprio — nenhum é captura da tela:
+  PDF completo (A4 paisagem, texto nativo), PDF MOBILE (cards em página estreita),
+  impressão completa, impressão MOBILE, JPEG vertical para WhatsApp e versão escrita.
+- **Modal de exportação** com orientação, papel, agrupamento (data, responsável, cidade
+  ou cliente), política de CPF/CNPJ e geração de documentos individualizados.
+- **Pré-visualização** em moldura de aparelho, alternando entre 360, 390 e 430 px.
 - **Funciona offline** com a última cópia sincronizada.
 
 ### Como executar
@@ -70,14 +74,24 @@ Abra **Configurações** no cabeçalho para ajustar:
 ### Estrutura
 
 ```
-index.html              interface
-assets/css/styles.css   identidade visual (marinho e dourado da logomarca)
-assets/img/logo.png     logomarca oficial
-assets/js/ics.js        parser do calendário iCalendar do Astrea
-assets/js/store.js      persistência local (responsáveis, modalidade, equipe)
-assets/js/export.js     motor de layout em canvas — PDF, JPEG e texto
-assets/js/app.js        controlador: filtros, tabela e sincronização
+index.html                interface
+assets/css/styles.css     identidade visual da tela
+assets/css/documento.css  estilo dos documentos exportados (prévia e impressão)
+assets/img/logo.png       logomarca oficial
+assets/js/ics.js          parser do calendário iCalendar do Astrea
+assets/js/store.js        persistência local (responsáveis, modalidade, equipe)
+assets/js/formato.js      constantes da marca, formatação, máscaras, agrupamento
+assets/js/documento.js    modelo do documento, comum a todos os formatos
+assets/js/doc-html.js     documentos HTML (prévia e impressão)
+assets/js/pdf.js          PDF com texto nativo — completo e MOBILE
+assets/js/jpeg.js         JPEG vertical em partes
+assets/js/exportar.js     modal, prévia, impressão e downloads
+assets/js/app.js          controlador: filtros, tabela e sincronização
 ```
+
+O fluxo é sempre o mesmo: a tela entrega os registros filtrados, `documento.js`
+monta um modelo único (grupos, resumo, privacidade aplicada) e cada renderizador
+consome esse modelo. Nenhum formato depende do layout da tela.
 
 ### Notas técnicas
 
@@ -90,6 +104,23 @@ assets/js/app.js        controlador: filtros, tabela e sincronização
 - **Semana forense.** A semana vai de segunda a domingo.
 - **Prazos longos.** Alguns prazos trazem o despacho inteiro no título; nas exportações
   cada célula é limitada a 5 linhas para não estourar a página.
+
+### Decisões de layout dos documentos
+
+- **PDF com texto nativo.** A exportação anterior desenhava a pauta num canvas e
+  embutia a imagem: nada era selecionável nem pesquisável. Agora o texto é texto,
+  os links são anotações reais e a nitidez independe do zoom.
+- **Página do PDF MOBILE: 110 × 260 mm.** Num celular a folha ocupa a largura da tela,
+  então uma página estreita faz o mesmo corpo de 11 pt aparecer maior — é o que
+  dispensa o zoom. Mantidos os mínimos de 11 pt no corpo e 12 pt nos botões, um card
+  ocupa cerca de 94 mm, o que resulta em **2 cards por página**, não nos 3 a 5
+  sugeridos. Cabem 3 apenas reduzindo a fonte ou cortando campos; como as próprias
+  regras pedem para não forçar a densidade nem diminuir a tipografia, a legibilidade
+  prevaleceu. Quem preferir papel comum tem a opção *A4 retrato* no modal.
+- **JPEG dividido em partes.** Cada parte tem 1080 px de largura e no máximo 4000 px de
+  altura; a quebra respeita os limites dos cards e nunca deixa cabeçalho de dia órfão.
+- **CPF e CNPJ mascarados por padrão** em PDF MOBILE, impressão MOBILE e JPEG, que são
+  os formatos que circulam por celular. O modal permite exibir ou ocultar.
 
 ### O que o feed do Astrea não exporta
 

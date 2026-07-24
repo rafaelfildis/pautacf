@@ -1,18 +1,16 @@
-/* PAUTA CF — controlador da interface. */
+/* PAUTA DE AUDIÊNCIAS CALMON E FREITAS ADVOGADOS — controlador da interface. */
 
 import { parseICS } from './ics.js';
 import {
   getAnotacao, setAnotacao, exportarAnotacoes, importarAnotacoes,
   getAdvogados, setAdvogados, getConfig, setConfig, salvarCache, lerCache,
 } from './store.js';
-import {
-  exportarJPEG, exportarPDF, montarTexto, baixarTexto, carregarLogo,
-} from './export.js';
+import { MARCA, MODALIDADES, gerarNomeArquivo } from './formato.js';
+import { ligarExportacao } from './exportar.js';
+import { carregarLogoDataURI } from './doc-html.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
-
-const MODALIDADES = ['Presencial', 'Virtual'];
 
 /* A grande maioria das audiências do escritório é telepresencial, e o feed do
    Astrea não exporta a modalidade — então "Virtual" já vem marcado e o usuário
@@ -105,12 +103,6 @@ function rotuloPeriodo() {
   }
 }
 
-function sufixoArquivo() {
-  const { inicio, fim } = intervaloAtual();
-  const iso = (d) => d.toISOString().slice(0, 10);
-  return estado.periodo === 'dia' ? iso(inicio) : `${iso(inicio)}_a_${iso(fim)}`;
-}
-
 /* ================= dados ================= */
 
 /** Aplica anotações locais e normaliza os campos para exibição. */
@@ -165,29 +157,8 @@ function filtrar() {
   return lista;
 }
 
-/** Converte para as strings usadas nas exportações. */
-function paraExportacao(lista) {
-  return lista.map((e) => ({
-    tipo: e.tipo,
-    subtipo: e.subtipo,
-    data: fmtData.format(e.inicio),
-    diaSemana: fmtDiaSemana.format(e.inicio),
-    horario: e.tipo === 'tarefa'
-      ? `${e.subtipo === 'prazo' ? 'Prazo' : 'Tarefa'}${e.detalhe ? ` · ${e.detalhe}` : ''}`
-      : `${fmtHora.format(e.inicio)}${e.fim ? ` – ${fmtHora.format(e.fim)}` : ''}`,
-    parteAutora: e.parteAutora || e.titulo,
-    parteRe: e.parteRe,
-    processo: e.processo,
-    foro: e.foro,
-    cidade: e.cidade,
-    responsavel: e.responsavel,
-    modalidade: e.modalidade,
-    link: e.link,
-    titulo: e.titulo,
-  }));
-}
-
-function metaExportacao(lista) {
+/** Contagem exibida na barra de exportação da tela. */
+function resumoDaTela(lista) {
   const conta = (sub) => lista.filter((e) => e.subtipo === sub).length;
   const audiencias = conta('audiencia');
   const tarefas = conta('tarefa');
@@ -203,9 +174,32 @@ function metaExportacao(lista) {
   return {
     titulo: rotuloTipo[estado.periodo] || 'Pauta do período',
     subtitulo: rotuloPeriodo(),
-    emitidoEm: fmtCarimbo.format(new Date()),
     contagem: partes.join(' · ') || 'Sem compromissos',
   };
+}
+
+/**
+ * Entrega aos módulos de exportação exatamente o que está na tela: os mesmos
+ * registros filtrados, na mesma ordem, e o período correspondente.
+ */
+function obterDadosParaExportacao() {
+  const { inicio, fim } = intervaloAtual();
+  return {
+    registros: filtrar(),
+    periodo: { de: inicio, ate: fim, rotulo: rotuloPeriodo() },
+  };
+}
+
+function baixarTexto(texto, nome) {
+  const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
 /* ================= renderização ================= */
@@ -300,7 +294,7 @@ function renderizar() {
   $('#vazio').hidden = lista.length > 0;
   $('#rotuloPeriodo').textContent = rotuloPeriodo();
 
-  const meta = metaExportacao(lista);
+  const meta = resumoDaTela(lista);
   $('#exportarTitulo').textContent = meta.titulo;
   $('#exportarSubtitulo').textContent = `${meta.subtitulo} · ${meta.contagem}`;
 
@@ -443,40 +437,6 @@ function avisar(mensagem, erro = false) {
   timerAviso = setTimeout(() => { el.hidden = true; }, 4600);
 }
 
-/* ================= exportações ================= */
-
-async function exportar(formato) {
-  const lista = filtrar();
-  const dados = paraExportacao(lista);
-  const meta = metaExportacao(lista);
-  const nome = `pauta-cf-${sufixoArquivo()}`;
-
-  if (formato === 'texto') {
-    const texto = montarTexto(dados, meta);
-    $('#saidaTexto').value = texto;
-    $('#modalTexto').showModal();
-    return;
-  }
-
-  try {
-    if (formato === 'jpeg') {
-      await exportarJPEG(dados, meta, nome);
-      avisar('Imagem JPEG gerada.');
-      return;
-    }
-
-    const resultado = await exportarPDF(dados, meta, nome);
-    if (resultado.imprimir) {
-      avisar('Gerador de PDF indisponível. Abrindo a impressão do navegador.', true);
-      setTimeout(() => window.print(), 700);
-    } else {
-      avisar('PDF gerado.');
-    }
-  } catch (erro) {
-    avisar(`Falha na exportação: ${erro.message}`, true);
-  }
-}
-
 /* ================= configurações ================= */
 
 function renderizarAdvogados() {
@@ -607,9 +567,8 @@ function ligarEventos() {
 
   $('#btnSincronizar').addEventListener('click', () => sincronizar());
 
-  $('#btnPdf').addEventListener('click', () => exportar('pdf'));
-  $('#btnJpeg').addEventListener('click', () => exportar('jpeg'));
-  $('#btnTexto').addEventListener('click', () => exportar('texto'));
+  // Toda a exportação vive em exportar.js; a tela só entrega os dados filtrados.
+  ligarExportacao({ obterDados: obterDadosParaExportacao, avisar });
 
   $('#fecharTexto').addEventListener('click', () => $('#modalTexto').close());
   $('#btnCopiarTexto').addEventListener('click', async () => {
@@ -622,7 +581,10 @@ function ligarEventos() {
     }
   });
   $('#btnBaixarTexto').addEventListener('click', () => {
-    baixarTexto($('#saidaTexto').value, `pauta-cf-${sufixoArquivo()}`);
+    const { periodo } = obterDadosParaExportacao();
+    baixarTexto($('#saidaTexto').value, gerarNomeArquivo({
+      de: periodo.de, ate: periodo.ate, extensao: 'txt',
+    }));
   });
 
   // --- configurações ---
@@ -684,9 +646,10 @@ function ligarEventos() {
 /* ================= início ================= */
 
 function iniciar() {
+  document.title = MARCA.titulo;
   ligarEventos();
   preencherFiltroResponsavel();
-  carregarLogo();  // deixa a marca pronta antes da primeira exportação
+  carregarLogoDataURI();  // deixa a marca pronta antes da primeira exportação
 
   // Abre com a cópia local para a pauta aparecer instantaneamente.
   const cache = lerCache();
