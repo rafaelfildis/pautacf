@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAUTA CF — Calmon &amp; Freitas Advogados</title>
+<meta name="description" content="Acompanhamento e extração da pauta de audiências e tarefas do escritório Calmon &amp; Freitas Advogados.">
+<meta name="theme-color" content="#0d1b34">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo__marca">
+    <img class="logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
+    <span class="topo__divisor" aria-hidden="true"></span>
+    <div class="topo__texto">
+      <h1>PAUTA <span>CF</span></h1>
+      <p>Audiências e prazos</p>
+    </div>
+  </div>
+
+  <div class="topo__acoes">
+    <div class="sinc" id="sinc">
+      <span class="sinc__ponto" id="sincPonto"></span>
+      <span id="sincTexto">Carregando agenda…</span>
+    </div>
+    <button class="btn btn--fantasma" id="btnConfig" type="button" title="Configurações">
+      <span aria-hidden="true">⚙</span> Configurações
+    </button>
+    <button class="btn btn--ouro" id="btnSincronizar" type="button">
+      <span aria-hidden="true">⟳</span> Sincronizar
+    </button>
+  </div>
+</header>
+
+<main class="conteudo">
+
+  <!-- ---------- Filtros ---------- -->
+  <section class="painel filtros" aria-label="Filtros da pauta">
+
+    <div class="filtros__periodo" role="tablist" aria-label="Período">
+      <button class="aba" role="tab" data-periodo="dia" type="button">Dia</button>
+      <button class="aba aba--ativa" role="tab" data-periodo="semana" aria-selected="true" type="button">Semana</button>
+      <button class="aba" role="tab" data-periodo="mes" type="button">Mês</button>
+      <button class="aba" role="tab" data-periodo="livre" type="button">Período</button>
+    </div>
+
+    <div class="filtros__navegacao">
+      <button class="btn-nav" id="btnAnterior" type="button" aria-label="Período anterior">‹</button>
+      <button class="btn-nav btn-nav--hoje" id="btnHoje" type="button">Hoje</button>
+      <button class="btn-nav" id="btnProximo" type="button" aria-label="Próximo período">›</button>
+      <strong class="filtros__rotulo" id="rotuloPeriodo">—</strong>
+    </div>
+
+    <div class="filtros__livre" id="filtrosLivre" hidden>
+      <label>De <input type="date" id="dataDe"></label>
+      <label>Até <input type="date" id="dataAte"></label>
+    </div>
+
+    <div class="filtros__refino">
+      <label class="campo campo--busca">
+        <span class="campo__icone" aria-hidden="true">⌕</span>
+        <input type="search" id="busca" placeholder="Buscar por parte, processo, vara ou cidade…"
+               aria-label="Buscar na pauta">
+      </label>
+
+      <label class="campo">
+        <select id="filtroTipo" aria-label="Tipo de compromisso">
+          <option value="audiencia">Somente audiências</option>
+          <option value="tarefa">Somente tarefas e prazos</option>
+          <option value="todos">Audiências e tarefas</option>
+        </select>
+      </label>
+
+      <label class="campo">
+        <select id="filtroResponsavel" aria-label="Filtrar por responsável">
+          <option value="">Todos os responsáveis</option>
+        </select>
+      </label>
+
+      <label class="campo">
+        <select id="filtroModalidade" aria-label="Filtrar por modalidade">
+          <option value="">Todas as modalidades</option>
+          <option value="Presencial">Presencial</option>
+          <option value="Virtual">Virtual</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <!-- ---------- Indicadores ---------- -->
+  <section class="indicadores" aria-label="Resumo do período">
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiAudiencias">0</span>
+      <span class="indicador__rotulo">Audiências</span>
+    </article>
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiTarefas">0</span>
+      <span class="indicador__rotulo">Tarefas e prazos</span>
+    </article>
+    <article class="indicador indicador--alerta">
+      <span class="indicador__valor" id="kpiSemResponsavel">0</span>
+      <span class="indicador__rotulo">Sem responsável</span>
+    </article>
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiComarcas">0</span>
+      <span class="indicador__rotulo">Comarcas</span>
+    </article>
+  </section>
+
+  <!-- ---------- Exportação ---------- -->
+  <section class="painel exportar" aria-label="Exportar pauta">
+    <div class="exportar__info">
+      <strong id="exportarTitulo">Pauta do período</strong>
+      <span id="exportarSubtitulo">—</span>
+    </div>
+    <div class="exportar__botoes">
+      <button class="btn btn--escuro" id="btnPdf" type="button">Exportar PDF</button>
+      <button class="btn btn--escuro" id="btnJpeg" type="button">Exportar JPEG</button>
+      <button class="btn btn--escuro" id="btnTexto" type="button">Versão escrita</button>
+    </div>
+  </section>
+
+  <!-- ---------- Tabela ---------- -->
+  <section class="painel tabela-envolucro">
+    <div class="tabela-rolagem">
+      <table class="tabela" id="tabela">
+        <thead>
+          <tr>
+            <th class="col-data" data-ordenar="inicio">Data</th>
+            <th class="col-hora" data-ordenar="hora">Horário</th>
+            <th data-ordenar="parteAutora">Parte autora</th>
+            <th data-ordenar="parteRe">Parte ré</th>
+            <th class="col-processo" data-ordenar="processo">Processo</th>
+            <th data-ordenar="foro">Juízo / Vara</th>
+            <th class="col-cidade" data-ordenar="cidade">Cidade</th>
+            <th class="col-resp">Responsável</th>
+            <th class="col-modo">Modalidade</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela"></tbody>
+      </table>
+    </div>
+    <p class="vazio" id="vazio" hidden>Nenhum compromisso encontrado para os filtros selecionados.</p>
+  </section>
+</main>
+
+<!-- ---------- Modal: configurações ---------- -->
+<dialog class="modal" id="modalConfig">
+  <form method="dialog" class="modal__conteudo">
+    <header class="modal__topo">
+      <h2>Configurações</h2>
+      <button class="modal__fechar" value="cancelar" aria-label="Fechar">×</button>
+    </header>
+
+    <div class="modal__corpo">
+      <label class="bloco">
+        <span class="bloco__titulo">Link da agenda (Astrea)</span>
+        <input type="url" id="cfgUrl" spellcheck="false">
+        <small>Aceita <code>webcal://</code> ou <code>https://</code>. A conversão é automática.</small>
+      </label>
+
+      <div class="bloco">
+        <span class="bloco__titulo">Equipe — advogados responsáveis</span>
+        <div class="etiquetas" id="listaAdvogados"></div>
+        <div class="bloco__linha">
+          <input type="text" id="novoAdvogado" placeholder="Nome do advogado" autocomplete="off">
+          <button class="btn btn--ouro" id="btnAddAdvogado" type="button">Adicionar</button>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <span class="bloco__titulo">Backup das atribuições</span>
+        <small>Responsáveis, modalidades e ajustes ficam salvos neste navegador. Exporte para levar a outro computador.</small>
+        <div class="bloco__linha">
+          <button class="btn btn--fantasma" id="btnExportarDados" type="button">Baixar backup</button>
+          <button class="btn btn--fantasma" id="btnImportarDados" type="button">Restaurar backup</button>
+          <input type="file" id="arquivoImportar" accept="application/json" hidden>
+        </div>
+      </div>
+    </div>
+
+    <footer class="modal__rodape">
+      <button class="btn btn--ouro" value="ok" type="submit">Concluir</button>
+    </footer>
+  </form>
+</dialog>
+
+<!-- ---------- Modal: versão escrita ---------- -->
+<dialog class="modal" id="modalTexto">
+  <div class="modal__conteudo">
+    <header class="modal__topo">
+      <h2>Versão escrita</h2>
+      <button class="modal__fechar" id="fecharTexto" aria-label="Fechar">×</button>
+    </header>
+    <div class="modal__corpo">
+      <textarea id="saidaTexto" rows="18" spellcheck="false" readonly></textarea>
+    </div>
+    <footer class="modal__rodape">
+      <button class="btn btn--fantasma" id="btnBaixarTexto" type="button">Baixar .txt</button>
+      <button class="btn btn--ouro" id="btnCopiarTexto" type="button">Copiar</button>
+    </footer>
+  </div>
+</dialog>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

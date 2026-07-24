@@ -15,6 +15,9 @@ data/saida/
 pautas/
 *.xlsx
 !data/exemplos/*.xlsx
+pauta-cf-*.pdf
+pauta-cf-*.jpg
+pauta-cf-*.txt
 
 .pytest_cache/
 .mypy_cache/
