@@ -17,6 +17,7 @@ const CORES = {
   texto: '#1c2433',
   textoFraco: '#5b6577',
   linha: '#dde2ea',
+  link: '#1d5fa8',
 };
 
 /* Proporções das colunas (normalizadas em tempo de execução). */
@@ -258,7 +259,11 @@ function desenharCabecalhoTabela(ctx, colunas, y) {
   return y + altura;
 }
 
-function desenharLinha(ctx, colunas, linha, y, indice) {
+/**
+ * Desenha uma linha da pauta.
+ * @param {Array} areasLink recebe o retângulo do link para virar anotação no PDF
+ */
+function desenharLinha(ctx, colunas, linha, y, indice, areasLink) {
   const largura = LARGURA - MARGEM * 2;
 
   if (indice % 2 === 1) {
@@ -274,18 +279,34 @@ function desenharLinha(ctx, colunas, linha, y, indice) {
   ctx.textBaseline = 'top';
 
   for (const col of colunas) {
+    const partes = linha.celulas[col.chave];
+    const ehLink = col.chave === 'link' && !!linha.item.link;
+
     const destaque = col.chave === 'data' || col.chave === 'responsavel';
-    ctx.fillStyle = destaque ? CORES.texto : CORES.textoFraco;
+    ctx.fillStyle = ehLink ? CORES.link : destaque ? CORES.texto : CORES.textoFraco;
     ctx.font = `${destaque ? 600 : 400} 21px "Segoe UI", system-ui, Arial, sans-serif`;
 
-    const partes = linha.celulas[col.chave];
     partes.forEach((parte, i) => {
-      ctx.fillText(
-        parte,
-        col.x + PADDING_CELULA,
-        y + PADDING_CELULA + i * ALTURA_LINHA_TEXTO + 3
-      );
+      const px = col.x + PADDING_CELULA;
+      const py = y + PADDING_CELULA + i * ALTURA_LINHA_TEXTO + 3;
+      ctx.fillText(parte, px, py);
+
+      // Sublinhado marca o que é clicável — sem ele o link some no meio da tabela.
+      if (ehLink) {
+        const larguraTexto = ctx.measureText(parte).width;
+        ctx.fillRect(px, py + 24, larguraTexto, 1.5);
+      }
     });
+
+    if (ehLink) {
+      areasLink.push({
+        url: linha.item.link,
+        x: col.x,
+        y,
+        largura: col.largura,
+        altura: linha.altura,
+      });
+    }
   }
 
   ctx.textBaseline = 'alphabetic';
@@ -337,7 +358,7 @@ function novoCanvas(largura, altura) {
  * @param {Array<object>} dados linhas já formatadas para exibição
  * @param {object} meta { titulo, subtitulo, emitidoEm, contagem }
  * @param {boolean} paginado true gera páginas A4; false gera imagem contínua
- * @returns {HTMLCanvasElement[]}
+ * @returns {Array<{canvas: HTMLCanvasElement, areasLink: Array}>}
  */
 export function renderizarPauta(dados, meta, paginado) {
   const medidor = document.createElement('canvas').getContext('2d');
@@ -357,11 +378,14 @@ export function renderizarPauta(dados, meta, paginado) {
       : ALTURA_CABECALHO + alturaCabecalhoTabela + alturaConteudo + ALTURA_RODAPE + 20;
 
     const { canvas, ctx } = novoCanvas(LARGURA, altura);
+    const areasLink = [];
 
     desenharCabecalho(ctx, meta, indicePagina + 1, paginas.length);
 
     let y = desenharCabecalhoTabela(ctx, colunas, ALTURA_CABECALHO + 14);
-    linhasPagina.forEach((linha, i) => { y = desenharLinha(ctx, colunas, linha, y, i); });
+    linhasPagina.forEach((linha, i) => {
+      y = desenharLinha(ctx, colunas, linha, y, i, areasLink);
+    });
 
     if (!linhasPagina.length) {
       ctx.fillStyle = CORES.textoFraco;
@@ -372,7 +396,7 @@ export function renderizarPauta(dados, meta, paginado) {
     }
 
     desenharRodape(ctx, altura, meta);
-    return canvas;
+    return { canvas, areasLink };
   });
 }
 
@@ -391,7 +415,7 @@ function baixar(blob, nome) {
 
 export async function exportarJPEG(dados, meta, nomeArquivo) {
   await carregarLogo();
-  const [canvas] = renderizarPauta(dados, meta, false);
+  const [{ canvas }] = renderizarPauta(dados, meta, false);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -449,9 +473,24 @@ export async function exportarPDF(dados, meta, nomeArquivo) {
   const larguraMm = 297;
   const alturaMm = 210;
 
-  paginas.forEach((canvas, i) => {
+  // A página é uma imagem esticada até o tamanho do A4; as anotações de link
+  // precisam da mesma conversão para cair exatamente sobre o texto.
+  const escalaX = larguraMm / LARGURA;
+  const escalaY = alturaMm / ALTURA_PAGINA;
+
+  paginas.forEach(({ canvas, areasLink }, i) => {
     if (i > 0) pdf.addPage();
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, larguraMm, alturaMm);
+
+    for (const area of areasLink) {
+      pdf.link(
+        area.x * escalaX,
+        area.y * escalaY,
+        area.largura * escalaX,
+        area.altura * escalaY,
+        { url: area.url }
+      );
+    }
   });
 
   pdf.save(`${nomeArquivo}.pdf`);
