@@ -21,9 +21,14 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 
 - **Sincronização direta com o Astrea**, sem servidor intermediário: o feed do Astrea
   envia `Access-Control-Allow-Origin: *`, então o navegador busca o calendário sozinho.
-- **Separação entre audiências e tarefas.** O Astrea entrega as duas no mesmo feed, como
-  `VEVENT`; a distinção está no `UID` (`astreaappointment…` × `astreatask…`) e não no
-  formato da data. Audiências têm hora marcada, tarefas são de dia inteiro.
+- **Separação entre audiências, tarefas e prazos.** O Astrea entrega tudo no mesmo feed,
+  como `VEVENT`; a distinção entre audiência e compromisso de dia inteiro está no `UID`
+  (`astreaappointment…` × `astreatask…`), não no formato da data.
+  Dentro dos compromissos de dia inteiro, tarefas do escritório ("RÉPLICA",
+  "REPROTOCOLAR") são separadas dos prazos determinados pelo juízo por linguagem de
+  despacho (*prazo*, *dias*, *intime-se*, *sob pena*) e por extensão do texto — a maior
+  tarefa tem 49 caracteres e o menor prazo tem 60. O filtro permite ver cada grupo
+  isolado ou combinado.
 - **Filtros de período**: dia, semana, mês ou intervalo livre, com navegação para frente
   e para trás.
 - **Filtros de refino**: busca textual, responsável, modalidade e tipo de compromisso.

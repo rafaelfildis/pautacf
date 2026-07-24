@@ -163,6 +163,25 @@ function titleCase(text) {
     .join(' ');
 }
 
+/* Linguagem típica de despacho judicial com prazo a cumprir. */
+const RE_PRAZO = /\bprazo\b|\bdias\b|\bintime-se\b|\bemende\b|\bapenas em\b|\bsob pena\b/i;
+
+/* Tarefas do escritório são rótulos curtos ("RÉPLICA", "REPROTOCOLAR"); prazos
+   vêm com o texto do despacho. Na agenda atual a maior tarefa tem 49 caracteres
+   e o menor prazo tem 60, então o limite fica confortavelmente no meio. */
+const TAMANHO_MAX_TAREFA = 55;
+
+/**
+ * Separa, dentro dos compromissos de dia inteiro do Astrea, o que é tarefa do
+ * escritório do que é prazo determinado pelo juízo.
+ * @returns {'tarefa'|'prazo'}
+ */
+function classificarTarefa(texto) {
+  if (!texto) return 'tarefa';
+  if (RE_PRAZO.test(texto)) return 'prazo';
+  return texto.length > TAMANHO_MAX_TAREFA ? 'prazo' : 'tarefa';
+}
+
 /** Rótulo curto do compromisso: o trecho antes de " - " no SUMMARY. */
 function tituloCurto(summary) {
   const idx = summary.indexOf(' - ');
@@ -219,9 +238,14 @@ export function parseICS(icsText) {
     // Sem DESCRIPTION estruturada (tarefas soltas), o SUMMARY é a única fonte.
     const semEstrutura = !campos.processo && !campos.foro;
 
+    const ehTarefa = uid.startsWith('astreatask');
+    const detalhe = campos.detalhe || (semEstrutura ? summary : '');
+
     eventos.push({
       uid,
-      tipo: uid.startsWith('astreatask') ? 'tarefa' : 'audiencia',
+      tipo: ehTarefa ? 'tarefa' : 'audiencia',
+      // 'audiencia' | 'tarefa' | 'prazo' — o filtro da interface usa este campo.
+      subtipo: ehTarefa ? classificarTarefa(detalhe) : 'audiencia',
       inicio: start.date,
       fim: end.date,
       diaInteiro: start.allDay,

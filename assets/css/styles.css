@@ -455,6 +455,13 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
   border: 1px solid rgba(201, 169, 97, 0.35);
 }
 
+/* Prazo é determinação do juízo — merece leitura distinta da tarefa interna. */
+.selo--prazo {
+  background: rgba(217, 154, 60, 0.18);
+  color: #edbf7c;
+  border: 1px solid rgba(217, 154, 60, 0.45);
+}
+
 .tabela select.celula {
   width: 100%;
   padding: 6px 8px;

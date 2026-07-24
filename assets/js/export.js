@@ -523,7 +523,9 @@ export function montarTexto(dados, meta) {
     linhas.push('-'.repeat(60));
 
     for (const item of itens) {
-      const marcador = item.tipo === 'tarefa' ? '[TAREFA]' : item.horario;
+      const marcador = item.tipo === 'tarefa'
+        ? `[${item.subtipo === 'prazo' ? 'PRAZO' : 'TAREFA'}]`
+        : item.horario;
       linhas.push(`${marcador}  ${item.parteAutora || item.titulo}`);
 
       if (item.parteRe) linhas.push(`          Réu: ${item.parteRe}`);

@@ -134,7 +134,10 @@ function filtrar() {
     .filter((e) => e.inicio >= inicio && e.inicio <= fim)
     .map(decorar);
 
-  if (estado.tipo !== 'todos') lista = lista.filter((e) => e.tipo === estado.tipo);
+  if (estado.tipo !== 'todos') {
+    const aceitos = estado.tipo.split('+');
+    lista = lista.filter((e) => aceitos.includes(e.subtipo));
+  }
   if (estado.responsavel) {
     lista = lista.filter((e) =>
       estado.responsavel === '__sem__' ? !e.responsavel : e.responsavel === estado.responsavel
@@ -166,10 +169,11 @@ function filtrar() {
 function paraExportacao(lista) {
   return lista.map((e) => ({
     tipo: e.tipo,
+    subtipo: e.subtipo,
     data: fmtData.format(e.inicio),
     diaSemana: fmtDiaSemana.format(e.inicio),
     horario: e.tipo === 'tarefa'
-      ? `Tarefa${e.detalhe ? ` · ${e.detalhe}` : ''}`
+      ? `${e.subtipo === 'prazo' ? 'Prazo' : 'Tarefa'}${e.detalhe ? ` · ${e.detalhe}` : ''}`
       : `${fmtHora.format(e.inicio)}${e.fim ? ` – ${fmtHora.format(e.fim)}` : ''}`,
     parteAutora: e.parteAutora || e.titulo,
     parteRe: e.parteRe,
@@ -184,12 +188,15 @@ function paraExportacao(lista) {
 }
 
 function metaExportacao(lista) {
-  const audiencias = lista.filter((e) => e.tipo === 'audiencia').length;
-  const tarefas = lista.length - audiencias;
+  const conta = (sub) => lista.filter((e) => e.subtipo === sub).length;
+  const audiencias = conta('audiencia');
+  const tarefas = conta('tarefa');
+  const prazos = conta('prazo');
 
   const partes = [];
   if (audiencias) partes.push(`${audiencias} audiência${audiencias > 1 ? 's' : ''}`);
   if (tarefas) partes.push(`${tarefas} tarefa${tarefas > 1 ? 's' : ''}`);
+  if (prazos) partes.push(`${prazos} prazo${prazos > 1 ? 's' : ''}`);
 
   const rotuloTipo = { dia: 'Pauta do dia', semana: 'Pauta da semana', mes: 'Pauta do mês' };
 
@@ -233,8 +240,8 @@ function renderizar() {
     tdHora.className = 'col-hora';
     if (item.tipo === 'tarefa') {
       const selo = document.createElement('span');
-      selo.className = 'selo selo--tarefa';
-      selo.textContent = 'Tarefa';
+      selo.className = `selo selo--${item.subtipo}`;
+      selo.textContent = item.subtipo === 'prazo' ? 'Prazo' : 'Tarefa';
       tdHora.appendChild(selo);
       if (item.detalhe) {
         const t = document.createElement('span');
