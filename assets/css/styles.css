@@ -401,7 +401,9 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
 }
 
 .tabela thead th:hover { color: var(--ouro-300); }
-.tabela thead th.col-resp, .tabela thead th.col-modo { cursor: default; }
+.tabela thead th.col-resp,
+.tabela thead th.col-modo,
+.tabela thead th.col-link { cursor: default; }
 
 .tabela tbody td {
   padding: 11px 12px;
@@ -422,6 +424,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
 .col-cidade { width: 130px; }
 .col-resp { width: 165px; }
 .col-modo { width: 135px; }
+.col-link { width: 180px; }
 
 .tabela td.col-data { color: var(--prata-100); font-weight: 600; white-space: nowrap; }
 .tabela td.col-hora { white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -458,6 +461,31 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
   font-size: 12.5px;
   background: rgba(7, 16, 34, 0.55);
 }
+
+.tabela td.col-link { display: flex; align-items: center; gap: 5px; }
+
+.tabela input.celula--link {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: rgba(7, 16, 34, 0.55);
+  text-overflow: ellipsis;
+}
+
+.tabela input.celula--link::placeholder { color: rgba(168, 176, 189, 0.5); }
+
+.abrir-link {
+  color: var(--ouro-400);
+  text-decoration: none;
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.abrir-link:hover { background: rgba(201, 169, 97, 0.16); }
 
 .tabela .titulo-tarefa { color: var(--prata-100); }
 .tabela .foro { display: block; line-height: 1.35; }

@@ -21,15 +21,17 @@ const CORES = {
 
 /* Proporções das colunas (normalizadas em tempo de execução). */
 const COLUNAS = [
-  { chave: 'data', titulo: 'DATA', peso: 6.5 },
-  { chave: 'horario', titulo: 'HORÁRIO', peso: 9.5 },
-  { chave: 'parteAutora', titulo: 'PARTE AUTORA', peso: 14 },
-  { chave: 'parteRe', titulo: 'PARTE RÉ', peso: 14 },
-  { chave: 'processo', titulo: 'PROCESSO', peso: 13.5 },
-  { chave: 'foro', titulo: 'JUÍZO / VARA', peso: 18 },
-  { chave: 'cidade', titulo: 'CIDADE', peso: 8.5 },
-  { chave: 'responsavel', titulo: 'RESPONSÁVEL', peso: 9.5 },
-  { chave: 'modalidade', titulo: 'MODALIDADE', peso: 6 },
+  { chave: 'data', titulo: 'DATA', peso: 7 },
+  { chave: 'horario', titulo: 'HORÁRIO', peso: 8 },
+  { chave: 'parteAutora', titulo: 'PARTE AUTORA', peso: 11.5 },
+  { chave: 'parteRe', titulo: 'PARTE RÉ', peso: 11.5 },
+  /* Peso suficiente para o número CNJ completo caber numa linha só. */
+  { chave: 'processo', titulo: 'PROCESSO', peso: 14 },
+  { chave: 'foro', titulo: 'JUÍZO / VARA', peso: 13 },
+  { chave: 'cidade', titulo: 'CIDADE', peso: 7 },
+  { chave: 'responsavel', titulo: 'RESPONSÁVEL', peso: 8.5 },
+  { chave: 'modalidade', titulo: 'MODALIDADE', peso: 6.5 },
+  { chave: 'link', titulo: 'LINK DA AUDIÊNCIA', peso: 13 },
 ];
 
 const LARGURA = 2200;          // largura de renderização (proporção A4 paisagem)
@@ -492,6 +494,7 @@ export function montarTexto(dados, meta) {
 
       linhas.push(`          Responsável: ${item.responsavel || 'A DEFINIR'}`);
       if (item.modalidade) linhas.push(`          Modalidade: ${item.modalidade}`);
+      if (item.link) linhas.push(`          Link: ${item.link}`);
       linhas.push('');
     }
   }

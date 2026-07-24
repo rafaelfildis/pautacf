@@ -29,8 +29,9 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 - **Filtros de refino**: busca textual, responsável, modalidade e tipo de compromisso.
 - **Atribuição de responsável** por compromisso, com indicador do que ainda está sem
   advogado designado.
-- **Modalidade e cidade editáveis** — o Astrea não fornece esses campos de forma
-  padronizada, então a cidade é deduzida do foro e fica aberta a correção.
+- **Modalidade, cidade e link editáveis** — o Astrea não fornece esses campos de forma
+  padronizada, então a cidade é deduzida do foro, a modalidade já vem como *Virtual*
+  (troque nas exceções) e o link é extraído do texto quando existe.
 - **Exportação** em PDF (A4 paisagem, paginado), JPEG (imagem única) e versão escrita
   pronta para e-mail ou WhatsApp.
 - **Funciona offline** com a última cópia sincronizada.
@@ -84,6 +85,26 @@ assets/js/app.js        controlador: filtros, tabela e sincronização
 - **Semana forense.** A semana vai de segunda a domingo.
 - **Prazos longos.** Alguns prazos trazem o despacho inteiro no título; nas exportações
   cada célula é limitada a 5 linhas para não estourar a página.
+
+### O que o feed do Astrea não exporta
+
+A tela de evento do Astrea tem os campos **"Endereço ou local"**, **"Modalidade"** e
+**"Responsável"**, mas **nenhum deles vai para o `.ics`**. O feed traz apenas
+`SUMMARY`, `DESCRIPTION`, `DTSTART`, `DTEND`, `ORGANIZER`, `ATTENDEE` e `UID` — não
+existe uma única propriedade `LOCATION` no arquivo inteiro.
+
+Consequências práticas:
+
+- **Modalidade** é preenchida no painel, com *Virtual* como padrão.
+- **Link da audiência** é extraído por busca de URL na descrição — o que só funciona
+  quando alguém digitou o link nas *observações* do evento, já que essas vão para a
+  `DESCRIPTION`. Na agenda atual isso cobre 9 das 50 audiências; as demais são
+  preenchidas à mão no painel e ficam salvas.
+- Como cada secretaria escreve de um jeito ("Link da reunião:", "Acessando este link:",
+  "Endereço:", ou a URL solta), a extração procura a URL em si e ignora o rótulo.
+
+Levar o "Endereço ou local" para o painel automaticamente exigiria a API autenticada do
+Astrea, não o feed público de calendário.
 
 ---
 

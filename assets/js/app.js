@@ -14,6 +14,11 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 
 const MODALIDADES = ['Presencial', 'Virtual'];
 
+/* A grande maioria das audiências do escritório é telepresencial, e o feed do
+   Astrea não exporta a modalidade — então "Virtual" já vem marcado e o usuário
+   só troca as exceções. */
+const MODALIDADE_PADRAO = 'Virtual';
+
 const estado = {
   eventos: [],
   periodo: 'semana',
@@ -115,8 +120,9 @@ function decorar(evento) {
   return {
     ...evento,
     responsavel: anotacao.responsavel || '',
-    modalidade: anotacao.modalidade || '',
+    modalidade: anotacao.modalidade || MODALIDADE_PADRAO,
     cidade: anotacao.cidade ?? evento.cidade,
+    link: anotacao.link ?? evento.link,
   };
 }
 
@@ -172,6 +178,7 @@ function paraExportacao(lista) {
     cidade: e.cidade,
     responsavel: e.responsavel,
     modalidade: e.modalidade,
+    link: e.link,
     titulo: e.titulo,
   }));
 }
@@ -278,6 +285,8 @@ function renderizar() {
       renderizar();
     }));
 
+    tr.appendChild(celulaLink(item));
+
     corpo.appendChild(tr);
   }
 
@@ -289,6 +298,42 @@ function renderizar() {
   $('#exportarSubtitulo').textContent = `${meta.subtitulo} · ${meta.contagem}`;
 
   atualizarIndicadores(lista);
+}
+
+/**
+ * Célula do link da audiência: abre em nova aba quando preenchida e vira campo de
+ * digitação ao receber foco, já que o feed só traz o link em parte dos casos.
+ */
+function celulaLink(item) {
+  const td = document.createElement('td');
+  td.className = 'col-link';
+
+  const campo = document.createElement('input');
+  campo.type = 'url';
+  campo.className = 'celula celula--link';
+  campo.value = item.link || '';
+  campo.placeholder = 'colar link';
+  campo.spellcheck = false;
+
+  campo.addEventListener('change', () => {
+    setAnotacao(item.uid, { link: campo.value.trim() });
+    renderizar();
+  });
+
+  td.appendChild(campo);
+
+  if (item.link) {
+    const abrir = document.createElement('a');
+    abrir.href = item.link;
+    abrir.target = '_blank';
+    abrir.rel = 'noopener noreferrer';
+    abrir.className = 'abrir-link';
+    abrir.textContent = '↗';
+    abrir.title = 'Abrir sala da audiência';
+    td.appendChild(abrir);
+  }
+
+  return td;
 }
 
 function celulaSelecao(classe, opcoes, valorAtual, rotuloVazio, aoMudar) {

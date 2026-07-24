@@ -68,6 +68,22 @@ function parseDateValue(value, params) {
 }
 
 /**
+ * Procura o link da audiência no texto livre da descrição.
+ *
+ * O campo "Endereço ou local" do Astrea não é exportado no .ics — quando o link
+ * aparece, é porque foi digitado nas observações, e cada secretaria escreve de um
+ * jeito ("Link da reunião:", "Acessando este link:", "Endereço:", ou a URL solta).
+ * Por isso procuramos a URL em si, sem depender de rótulo.
+ */
+function extrairLink(text) {
+  const m = text.match(/https?:\/\/[^\s<>"']+/);
+  if (!m) return '';
+
+  // Pontuação final costuma vir colada na URL quando ela encerra a frase.
+  return m[0].replace(/[.,;:)\]]+$/, '');
+}
+
+/**
  * Extrai os campos estruturados da DESCRIPTION do Astrea, cujo formato é:
  *   AUTOR x RÉU
  *   Número:  <processo>
@@ -78,10 +94,12 @@ function parseDateValue(value, params) {
  *   <tipo da tarefa, quando houver>
  */
 function parseDescription(description) {
-  const out = { partes: '', processo: '', foro: '', cliente: '', detalhe: '' };
+  const out = { partes: '', processo: '', foro: '', cliente: '', detalhe: '', link: '' };
   if (!description) return out;
 
   const text = description.trim();
+
+  out.link = extrairLink(text);
 
   const numero = text.match(/N[úu]mero:\s*(.+)/i);
   if (numero) out.processo = numero[1].trim();
@@ -95,10 +113,11 @@ function parseDescription(description) {
   // A primeira linha traz as partes, antes do rótulo "Número:".
   out.partes = text.split(/\n\s*N[úu]mero:/i)[0].trim();
 
-  // O tipo da tarefa aparece depois do bloco "Cliente:".
+  // O tipo da tarefa aparece depois do bloco "Cliente:". O link sai daqui porque
+  // já tem campo próprio e só poluiria o rótulo do compromisso.
   if (cliente) {
     const after = text.slice(text.indexOf(cliente[0]) + cliente[0].length);
-    out.detalhe = after.trim();
+    out.detalhe = after.replace(/https?:\/\/[^\s<>"']+/g, '').replace(/\s+/g, ' ').trim();
   }
 
   return out;
@@ -214,6 +233,7 @@ export function parseICS(icsText) {
       foro: campos.foro,
       cliente: campos.cliente,
       cidade: deduzirCidade(campos.foro),
+      link: campos.link,
       detalhe: campos.detalhe,
       organizador: (props.ORGANIZER?.params.CN || '').replace(/^"|"$/g, ''),
       participantes: attendees,
