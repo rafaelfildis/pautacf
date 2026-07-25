@@ -125,8 +125,12 @@ export function montarDocumento(registros, periodo, config) {
 
   return {
     marca: MARCA,
-    titulo: MARCA.titulo,
-    tituloLinha1: MARCA.tituloLinha1,
+    /* "PAUTA DE AUDIÊNCIAS" nomeia uma pauta. O documento de audiência única não
+       é uma pauta: vai para a parte tratando de um compromisso só, e ali o nome
+       do escritório basta. Os renderizadores leem estes campos — vazio em
+       tituloLinha1 significa cabeçalho de uma linha. */
+    titulo: exportacaoIndividual ? MARCA.tituloLinha2 : MARCA.titulo,
+    tituloLinha1: exportacaoIndividual ? '' : MARCA.tituloLinha1,
     tituloLinha2: MARCA.tituloLinha2,
     periodo: { ...periodo },
     emitidoEm: formatarCarimbo(new Date()),

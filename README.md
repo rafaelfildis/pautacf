@@ -48,9 +48,11 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 - **Bloco OBSERVAÇÕES IMPORTANTES** nos documentos que contêm uma única audiência, com
   as orientações à parte (testar o link, documento com foto, 5 minutos de antecedência,
   consequência da ausência injustificada). Na pauta coletiva ele não aparece.
-- **Sem resumo executivo na audiência única.** Os seis contadores só fazem sentido numa
-  pauta: "1 audiência, 0 prazos, 1 comarca" apenas repete o que o documento já é. A
-  faixa institucional com a logomarca permanece em todos os documentos.
+- **A audiência única não se anuncia como pauta.** Sai o título "PAUTA DE AUDIÊNCIAS" —
+  do cabeçalho, do rodapé e dos metadados do arquivo — e o nome do escritório assume o
+  lugar de título. Saem também os seis contadores do resumo executivo, que só fazem
+  sentido numa pauta: "1 audiência, 0 prazos, 1 comarca" apenas repete o que o documento
+  já é. A logomarca e o período permanecem.
 - **Impressão e versão escrita** continuam disponíveis como ações, seguindo a mesma
   plataforma selecionada.
 - **Modal de mais opções** com orientação do A4, papel da impressão, agrupamento (data,

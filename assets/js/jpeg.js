@@ -13,7 +13,7 @@
  */
 
 import {
-  CORES, ICONE_MODALIDADE, MARCA, distribuirColunas, valorDaCelula,
+  CORES, ICONE_MODALIDADE, distribuirColunas, valorDaCelula,
 } from './formato.js';
 import { carregarLogoDataURI } from './doc-html.js';
 
@@ -504,15 +504,24 @@ function desenharCabecalho(ctx, doc, logo, parte, totalPartes, P) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
-    fonte(ctx, tipo.titulo, 700);
-    ctx.fillStyle = CORES.ouro;
-    ctx.fillText(doc.tituloLinha1, L / 2, y);
-    y += tipo.titulo * 1.2;
+    /* Sem a linha "PAUTA DE AUDIÊNCIAS" o nome do escritório vira o título, e a
+       faixa encolhe em vez de guardar espaço vazio. */
+    if (doc.tituloLinha1) {
+      fonte(ctx, tipo.titulo, 700);
+      ctx.fillStyle = CORES.ouro;
+      ctx.fillText(doc.tituloLinha1, L / 2, y);
+      y += tipo.titulo * 1.2;
 
-    fonte(ctx, tipo.meta + 2, 500);
-    ctx.fillStyle = '#e8ecf3';
-    ctx.fillText(doc.tituloLinha2, L / 2, y);
-    y += (tipo.meta + 2) * 1.35;
+      fonte(ctx, tipo.meta + 2, 500);
+      ctx.fillStyle = '#e8ecf3';
+      ctx.fillText(doc.tituloLinha2, L / 2, y);
+      y += (tipo.meta + 2) * 1.35;
+    } else {
+      fonte(ctx, tipo.titulo, 700);
+      ctx.fillStyle = CORES.ouro;
+      ctx.fillText(doc.tituloLinha2, L / 2, y);
+      y += tipo.titulo * 1.35;
+    }
 
     fonte(ctx, tipo.meta, 400);
     ctx.fillStyle = '#c3cbd8';
@@ -532,13 +541,19 @@ function desenharCabecalho(ctx, doc, logo, parte, totalPartes, P) {
     x += w + 30;
   }
 
-  fonte(ctx, tipo.titulo, 700);
-  ctx.fillStyle = CORES.ouro;
-  ctx.fillText(doc.tituloLinha1, x, alturaCab / 2 - tipo.titulo * 0.95);
+  if (doc.tituloLinha1) {
+    fonte(ctx, tipo.titulo, 700);
+    ctx.fillStyle = CORES.ouro;
+    ctx.fillText(doc.tituloLinha1, x, alturaCab / 2 - tipo.titulo * 0.95);
 
-  fonte(ctx, tipo.meta + 2, 500);
-  ctx.fillStyle = '#e8ecf3';
-  ctx.fillText(doc.tituloLinha2, x, alturaCab / 2 + 8);
+    fonte(ctx, tipo.meta + 2, 500);
+    ctx.fillStyle = '#e8ecf3';
+    ctx.fillText(doc.tituloLinha2, x, alturaCab / 2 + 8);
+  } else {
+    fonte(ctx, tipo.titulo, 700);
+    ctx.fillStyle = CORES.ouro;
+    ctx.fillText(doc.tituloLinha2, x, alturaCab / 2 - tipo.titulo * 0.6);
+  }
 
   ctx.textAlign = 'right';
   const xDir = L - P.margem;
@@ -568,7 +583,7 @@ function desenharRodape(ctx, doc, altura, P) {
   ctx.fillStyle = CORES.textoFraco;
   ctx.textBaseline = 'middle';
 
-  const esquerda = P.marcaCentralizada ? `Emitido em ${doc.emitidoEm}` : MARCA.titulo;
+  const esquerda = P.marcaCentralizada ? `Emitido em ${doc.emitidoEm}` : doc.titulo;
   ctx.fillText(esquerda, P.margem, y + alturaRodape / 2);
 
   ctx.textAlign = 'right';

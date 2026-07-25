@@ -167,11 +167,18 @@ function cabecalhoInstitucional(pdf, doc, logo, larguraPagina, margem, tipo) {
     } catch { /* segue sem a marca se o formato não for aceito */ }
   }
 
-  fonte(pdf, tipo.titulo, 'bold', CORES.ouro);
-  pdf.text(doc.tituloLinha1, x, alturaCab / 2 - 0.4);
+  /* Sem a linha "PAUTA DE AUDIÊNCIAS" o nome do escritório vira o título e volta
+     ao centro vertical da faixa, em vez de ficar caído para baixo. */
+  if (doc.tituloLinha1) {
+    fonte(pdf, tipo.titulo, 'bold', CORES.ouro);
+    pdf.text(doc.tituloLinha1, x, alturaCab / 2 - 0.4);
 
-  fonte(pdf, tipo.meta + 1, 'normal', '#e8ecf3');
-  pdf.text(doc.tituloLinha2, x, alturaCab / 2 + mm(tipo.titulo) * 0.75);
+    fonte(pdf, tipo.meta + 1, 'normal', '#e8ecf3');
+    pdf.text(doc.tituloLinha2, x, alturaCab / 2 + mm(tipo.titulo) * 0.75);
+  } else {
+    fonte(pdf, tipo.titulo, 'bold', CORES.ouro);
+    pdf.text(doc.tituloLinha2, x, alturaCab / 2 + mm(tipo.titulo) * 0.35);
+  }
 
   // Metadados à direita; no MOBILE não há largura para isso, vão para o rodapé.
   if (tipo !== TIPO_MOBILE) {
@@ -199,7 +206,7 @@ function rodape(pdf, doc, pagina, totalPaginas, larguraPagina, alturaPagina, mar
     pdf.text(doc.periodo.rotulo, margem, y);
     pdf.text(`${pagina}/${totalPaginas}`, larguraPagina - margem, y, { align: 'right' });
   } else {
-    pdf.text(MARCA.titulo, margem, y);
+    pdf.text(doc.titulo, margem, y);
     pdf.text(`Página ${pagina} de ${totalPaginas}`, larguraPagina - margem, y, { align: 'right' });
   }
 }
@@ -650,8 +657,10 @@ export async function gerarPDF(doc, modo, opcoes = {}) {
   const pdf = new jsPDF({ orientation: cfg.orientacao, unit: 'mm', format: cfg.formato });
 
   pdf.setProperties({
-    title: `${MARCA.titulo} — ${doc.periodo.rotulo}`,
-    subject: `Pauta de audiências e prazos — ${doc.periodo.rotulo}`,
+    title: `${doc.titulo} — ${doc.periodo.rotulo}`,
+    subject: doc.exportacaoIndividual
+      ? `Audiência — ${doc.periodo.rotulo}`
+      : `Pauta de audiências e prazos — ${doc.periodo.rotulo}`,
     author: 'Calmon e Freitas Advogados',
     creator: MARCA.titulo,
     keywords: 'pauta, audiências, prazos, Calmon e Freitas Advogados',

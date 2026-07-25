@@ -15,7 +15,7 @@
  */
 
 import {
-  FORMATOS, MARCA, MODOS_DOCUMENTO, CHAVES_AGRUPAMENTO, PLATAFORMAS,
+  FORMATOS, MODOS_DOCUMENTO, CHAVES_AGRUPAMENTO, PLATAFORMAS,
   ROTULO_FORMATO, ROTULO_PLATAFORMA,
   ehFormatoValido, ehPlataformaValida, gerarNomeArquivo, modoDoDocumento,
 } from './formato.js';
@@ -170,9 +170,10 @@ function entregar(doc, cfg, escopo = '', tipoEscopo = '') {
 /* ---------------- versão escrita ---------------- */
 
 function montarTexto(doc) {
+  // Linha vazia no documento de audiência única: não é uma pauta.
   const L = [
-    MARCA.tituloLinha1,
-    MARCA.tituloLinha2,
+    ...(doc.tituloLinha1 ? [doc.tituloLinha1] : []),
+    doc.tituloLinha2,
     doc.periodo.rotulo,
     '='.repeat(52),
     '',

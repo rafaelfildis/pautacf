@@ -79,12 +79,18 @@ function etiqueta(item) {
 function cabecalho(doc, logo) {
   const l = logo ? `<img class="doc-cab__logo" src="${logo}" alt="${esc(MARCA.tituloLinha2)}">` : '';
 
+  /* Sem a linha "PAUTA DE AUDIÊNCIAS" o nome do escritório assume o lugar de
+     título, em vez de ficar como legenda de um espaço vazio. */
+  const titulo = doc.tituloLinha1
+    ? `<strong>${esc(doc.tituloLinha1)}</strong>
+    <span>${esc(doc.tituloLinha2)}</span>`
+    : `<strong>${esc(doc.tituloLinha2)}</strong>`;
+
   return `
 <header class="doc-cab">
   ${l}
   <div class="doc-cab__titulo">
-    <strong>${esc(doc.tituloLinha1)}</strong>
-    <span>${esc(doc.tituloLinha2)}</span>
+    ${titulo}
   </div>
   <div class="doc-cab__meta">
     <div><b>${esc(doc.periodo.rotulo)}</b></div>
@@ -271,7 +277,7 @@ function observacoes(doc) {
 function rodape(doc) {
   return `
 <footer class="doc-rodape">
-  <span>${esc(MARCA.titulo)}</span>
+  <span>${esc(doc.titulo)}</span>
   <span>Emitido em ${esc(doc.emitidoEm)} · ${doc.resumo.total} registro${doc.resumo.total === 1 ? '' : 's'}</span>
 </footer>`;
 }
@@ -329,7 +335,7 @@ export async function gerarHTML(doc, modo, opcoes = {}) {
 <head>
 <meta charset="utf-8">
 ${viewport}
-<title>${esc(MARCA.titulo)} — ${esc(doc.periodo.rotulo)}</title>
+<title>${esc(doc.titulo)} — ${esc(doc.periodo.rotulo)}</title>
 <style>
 ${css}
 ${regraPagina}
