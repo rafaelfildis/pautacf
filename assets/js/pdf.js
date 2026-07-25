@@ -6,7 +6,7 @@
  * zoom. A paginação é calculada a partir da altura medida de cada elemento.
  */
 
-import { CORES, ICONE_MODALIDADE, MARCA } from './formato.js';
+import { CORES, MARCA, distribuirColunas, valorDaCelula } from './formato.js';
 import { carregarLogoDataURI } from './doc-html.js';
 
 const CDN_JSPDF = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
@@ -24,8 +24,14 @@ const hexRGB = (hex) => {
 };
 
 /* Tamanhos mínimos exigidos: 8,5 pt no completo, 11 pt no MOBILE, 12 pt em botões. */
-const TIPO_COMPLETO = { corpo: 8.5, cabecalhoTabela: 8, grupo: 11, titulo: 16, meta: 8, resumo: 13 };
-const TIPO_MOBILE = { corpo: 11, rotulo: 8.5, nome: 12, hora: 14, botao: 12, grupo: 12, titulo: 13, meta: 8.5, resumo: 14 };
+const TIPO_COMPLETO = {
+  corpo: 8.5, cabecalhoTabela: 8, grupo: 11, titulo: 16, meta: 8, resumo: 13,
+  obsTitulo: 10.5, obsCorpo: 9,
+};
+const TIPO_MOBILE = {
+  corpo: 11, rotulo: 8.5, nome: 12, hora: 14, botao: 12, grupo: 12, titulo: 13,
+  meta: 8.5, resumo: 14, obsTitulo: 11.5, obsCorpo: 10.5,
+};
 
 export const PAGINAS_PDF = {
   'completo': { formato: 'a4', orientacao: 'landscape', margem: 12 },
@@ -266,47 +272,70 @@ function desenharGrupo(pdf, grupo, x, y, largura, tipo, continuacao) {
   return ALTURA_GRUPO;
 }
 
-/* ================= MODELO COMPLETO (tabela) ================= */
+/* ================= OBSERVAÇÕES IMPORTANTES ================= */
 
-const COLUNAS = [
-  { chave: 'horario', titulo: 'HORÁRIO', peso: 20 },
-  { chave: 'parteAutora', titulo: 'PARTE AUTORA', peso: 40 },
-  { chave: 'parteRe', titulo: 'PARTE RÉ', peso: 40 },
-  { chave: 'processo', titulo: 'PROCESSO', peso: 42 },
-  { chave: 'foro', titulo: 'JUÍZO / VARA', peso: 43 },
-  { chave: 'cidade', titulo: 'CIDADE', peso: 24 },
-  { chave: 'responsavel', titulo: 'RESPONSÁVEL', peso: 26 },
-  { chave: 'modalidade', titulo: 'MODALIDADE', peso: 22 },
-  { chave: 'acesso', titulo: 'ACESSO', peso: 16 },
-];
+/* Recuo da numeração e folgas do quadro, em mm. */
+const OBS = { pad: 4, recuo: 6, gapItem: 1.6, gapTitulo: 2.4 };
+
+/** Largura útil de cada linha da lista, já descontado o número. */
+const larguraObs = (largura) => largura - OBS.pad * 2 - OBS.recuo;
+
+function medirObservacoes(pdf, doc, largura, tipo) {
+  if (!doc.observacoes.length) return 0;
+
+  let h = OBS.pad;
+  h += medir(pdf, doc.tituloObservacoes, { largura: largura - OBS.pad * 2, tamanho: tipo.obsTitulo, estilo: 'bold' });
+  h += OBS.gapTitulo;
+
+  for (const texto of doc.observacoes) {
+    h += medir(pdf, texto, { largura: larguraObs(largura), tamanho: tipo.obsCorpo }) + OBS.gapItem;
+  }
+
+  return h - OBS.gapItem + OBS.pad;
+}
+
+function desenharObservacoes(pdf, doc, x, y, largura, altura, tipo) {
+  retangulo(pdf, x, y, largura, altura, {
+    preenchimento: '#fffdf7',
+    borda: CORES.ouro,
+    raio: 2,
+    larguraBorda: 0.3,
+  });
+  retangulo(pdf, x, y + 1, 1.4, altura - 2, { preenchimento: CORES.ouro, raio: 0.7 });
+
+  let cy = y + OBS.pad;
+
+  cy += escrever(pdf, doc.tituloObservacoes, x + OBS.pad, cy, {
+    largura: largura - OBS.pad * 2,
+    tamanho: tipo.obsTitulo,
+    estilo: 'bold',
+    cor: CORES.marinho,
+  }) + OBS.gapTitulo;
+
+  doc.observacoes.forEach((texto, i) => {
+    fonte(pdf, tipo.obsCorpo, 'bold', CORES.ouro);
+    pdf.text(`${i + 1}.`, x + OBS.pad, cy + mm(tipo.obsCorpo) * 0.94);
+
+    cy += escrever(pdf, texto, x + OBS.pad + OBS.recuo, cy, {
+      largura: larguraObs(largura),
+      tamanho: tipo.obsCorpo,
+    }) + OBS.gapItem;
+  });
+}
+
+/* ================= MODELO COMPLETO (tabela) ================= */
 
 const PADDING_CEL = 1.6;
 const ALTURA_CAB_TABELA = 7;
 
-function colunasEm(largura) {
-  const total = COLUNAS.reduce((s, c) => s + c.peso, 0);
-  let x = 0;
-  return COLUNAS.map((c) => {
-    const w = (c.peso / total) * largura;
-    const col = { ...c, x, largura: w };
-    x += w;
-    return col;
-  });
-}
-
-function valorCelula(item, chave) {
-  if (chave === 'acesso') return item.link ? 'Entrar' : '—';
-  if (chave === 'modalidade') return '';
-  if (chave === 'foro') return item.foro + (item.foroComplemento ? ` (${item.foroComplemento})` : '');
-  return item[chave] ?? '';
-}
+const colunasEm = (largura) => distribuirColunas(largura);
 
 function medirLinhaTabela(pdf, item, colunas) {
   let maior = mm(TIPO_COMPLETO.corpo) * 1.28;
 
   for (const col of colunas) {
     if (col.chave === 'modalidade') continue;
-    const h = medir(pdf, valorCelula(item, col.chave), {
+    const h = medir(pdf, valorDaCelula(item, col.chave), {
       largura: col.largura - PADDING_CEL * 2,
       tamanho: TIPO_COMPLETO.corpo,
     });
@@ -348,7 +377,7 @@ function desenharLinhaTabela(pdf, item, colunas, x, y, largura, altura, par) {
     const destaque = col.chave === 'horario' || col.chave === 'responsavel';
     const alerta = col.chave === 'responsavel' && !item.temResponsavel;
 
-    escrever(pdf, valorCelula(item, col.chave), cx, y + PADDING_CEL, {
+    escrever(pdf, valorDaCelula(item, col.chave), cx, y + PADDING_CEL, {
       largura: col.largura - PADDING_CEL * 2,
       tamanho: TIPO_COMPLETO.corpo,
       estilo: destaque ? 'bold' : 'normal',
@@ -365,10 +394,16 @@ function desenharLinhaTabela(pdf, item, colunas, x, y, largura, altura, par) {
 
 const PAD_CARD = 4;
 
+/** Altura da linha de data — zero fora do documento de audiência única. */
+function alturaData(item) {
+  return item.mostrarData ? mm(TIPO_MOBILE.rotulo) * 1.3 + 1 : 0;
+}
+
 function medirCard(pdf, item, largura) {
   const wInterno = largura - PAD_CARD * 2;
   let h = PAD_CARD;
 
+  h += alturaData(item);
   h += mm(TIPO_MOBILE.hora) * 1.3 + 3;                                   // topo + divisor
   h += medir(pdf, item.parteAutora, { largura: wInterno, tamanho: TIPO_MOBILE.nome, estilo: 'bold' });
   h += mm(TIPO_MOBILE.rotulo) * 1.3 + 1.6;
@@ -415,6 +450,12 @@ function desenharCard(pdf, item, x, y, largura, altura) {
 
   const cx = x + PAD_CARD;
   let cy = y + PAD_CARD;
+
+  if (item.mostrarData) {
+    fonte(pdf, TIPO_MOBILE.rotulo, 'bold', CORES.ouro);
+    pdf.text(item.dataLonga.toUpperCase(), cx, cy + mm(TIPO_MOBILE.rotulo) * 0.94);
+    cy += alturaData(item);
+  }
 
   // topo: horário + etiqueta
   fonte(pdf, TIPO_MOBILE.hora, 'bold', CORES.marinho);
@@ -559,6 +600,7 @@ function paginar(elementos, alturaUtilPrimeira, alturaUtilDemais) {
 /** Achata o documento numa lista linear de elementos mensuráveis. */
 function montarElementos(pdf, doc, modo, largura) {
   const elementos = [];
+  const tipo = modo === 'mobile' ? TIPO_MOBILE : TIPO_COMPLETO;
 
   for (const grupo of doc.grupos) {
     elementos.push({ tipo: 'grupo', grupo, altura: ALTURA_GRUPO + 2.5 });
@@ -580,6 +622,10 @@ function montarElementos(pdf, doc, modo, largura) {
       elementos.push({ tipo: 'espaco', altura: 2 });
     }
   }
+
+  // As orientações fecham o documento, depois dos dados da audiência.
+  const hObs = medirObservacoes(pdf, doc, largura, tipo);
+  if (hObs) elementos.push({ tipo: 'observacoes', altura: hObs + 3, tipografia: tipo });
 
   return elementos;
 }
@@ -656,6 +702,10 @@ export async function gerarPDF(doc, modo, opcoes = {}) {
           break;
         case 'card':
           desenharCard(pdf, el.item, margem, y, largura, el.altura - 3);
+          y += el.altura;
+          break;
+        case 'observacoes':
+          desenharObservacoes(pdf, doc, margem, y, largura, el.altura - 3, el.tipografia);
           y += el.altura;
           break;
         default:

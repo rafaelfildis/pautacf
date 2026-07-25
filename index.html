@@ -119,15 +119,40 @@
       <strong id="exportarTitulo">Pauta do período</strong>
       <span id="exportarSubtitulo">—</span>
     </div>
-    <div class="exportar__botoes">
-      <button class="btn btn--escuro" id="btnPdfCompleto" type="button">PDF completo</button>
-      <button class="btn btn--escuro" id="btnPdfMobile" type="button">PDF MOBILE</button>
-      <button class="btn btn--escuro" id="btnImprimirCompleto" type="button">Imprimir completo</button>
-      <button class="btn btn--escuro" id="btnImprimirMobile" type="button">Imprimir MOBILE</button>
-      <button class="btn btn--escuro" id="btnJpeg" type="button">JPEG</button>
-      <button class="btn btn--escuro" id="btnTexto" type="button">Versão escrita</button>
-      <button class="btn btn--fantasma" id="btnPreviaRapida" type="button">Prévia</button>
-      <button class="btn btn--ouro" id="btnAbrirExportacao" type="button">Exportar…</button>
+    <div class="exportar__controles">
+      <div class="grupo-filtro">
+        <span class="grupo-filtro__rotulo" id="rotuloFormato">Formato</span>
+        <div class="segmento" id="grupoFormato" role="radiogroup" aria-labelledby="rotuloFormato">
+          <button class="segmento__opcao segmento__opcao--ativa" type="button"
+                  role="radio" aria-checked="true" data-formato="pdf">PDF</button>
+          <button class="segmento__opcao" type="button"
+                  role="radio" aria-checked="false" data-formato="jpeg">JPEG</button>
+        </div>
+      </div>
+
+      <div class="grupo-filtro">
+        <span class="grupo-filtro__rotulo" id="rotuloPlataforma">Plataforma</span>
+        <div class="segmento" id="grupoPlataforma" role="radiogroup" aria-labelledby="rotuloPlataforma">
+          <button class="segmento__opcao segmento__opcao--ativa" type="button"
+                  role="radio" aria-checked="true" data-plataforma="a4">A4</button>
+          <button class="segmento__opcao" type="button"
+                  role="radio" aria-checked="false" data-plataforma="mobile">MOBILE</button>
+        </div>
+      </div>
+
+      <div class="grupo-filtro">
+        <span class="grupo-filtro__rotulo">Ações</span>
+        <div class="grupo-filtro__acoes">
+          <button class="btn btn--fantasma" id="btnPrevia" type="button">Prévia</button>
+          <button class="btn btn--ouro" id="btnExportar" type="button">Exportar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="exportar__secundario">
+      <button class="btn btn--escuro btn--mini" id="btnImprimir" type="button">Imprimir</button>
+      <button class="btn btn--escuro btn--mini" id="btnTexto" type="button">Versão escrita</button>
+      <button class="btn btn--fantasma btn--mini" id="btnAbrirExportacao" type="button">Mais opções…</button>
     </div>
   </section>
 
@@ -210,23 +235,26 @@
 
       <div class="exp-grade">
         <label class="bloco">
-          <span class="bloco__titulo">Formato</span>
+          <span class="bloco__titulo">Formato do arquivo</span>
           <select id="expFormato">
-            <option value="pdf-completo">PDF completo</option>
-            <option value="pdf-mobile">PDF MOBILE</option>
-            <option value="imprimir-completo">Impressão completa</option>
-            <option value="imprimir-mobile">Impressão MOBILE</option>
+            <option value="pdf">PDF</option>
             <option value="jpeg">JPEG</option>
-            <option value="texto">Versão escrita</option>
+          </select>
+        </label>
+
+        <label class="bloco">
+          <span class="bloco__titulo">Plataforma</span>
+          <select id="expPlataforma">
+            <option value="a4">A4 — diagramação de computador</option>
+            <option value="mobile">MOBILE — diagramação de celular</option>
           </select>
         </label>
 
         <label class="bloco" id="linhaOrientacao">
-          <span class="bloco__titulo">Orientação</span>
+          <span class="bloco__titulo">Orientação do A4</span>
           <select id="expOrientacao">
             <option value="paisagem">Paisagem</option>
             <option value="retrato">Retrato</option>
-            <option value="auto">Automática</option>
           </select>
         </label>
 
@@ -238,16 +266,6 @@
             <option value="a4-paisagem">A4 paisagem</option>
             <option value="carta-retrato">Carta retrato</option>
             <option value="mobile">MOBILE vertical</option>
-          </select>
-        </label>
-
-        <label class="bloco" id="linhaVisualizacao">
-          <span class="bloco__titulo">Tipo de visualização</span>
-          <select id="expVisualizacao">
-            <option value="computador">Computador</option>
-            <option value="impressao">Impressão tradicional</option>
-            <option value="celular">Celular</option>
-            <option value="whatsapp">WhatsApp</option>
           </select>
         </label>
 
@@ -302,8 +320,9 @@
 
     <footer class="modal__rodape modal__rodape--espalhado">
       <div class="modal__rodape-grupo">
-        <button class="btn btn--fantasma" id="btnPreviaCompleta" type="button">Prévia completa</button>
-        <button class="btn btn--fantasma" id="btnPreviaMobile" type="button">Prévia MOBILE</button>
+        <button class="btn btn--fantasma" id="btnPreviaModal" type="button">Prévia</button>
+        <button class="btn btn--fantasma" id="btnImprimirModal" type="button">Imprimir</button>
+        <button class="btn btn--fantasma" id="btnTextoModal" type="button">Versão escrita</button>
       </div>
       <button class="btn btn--ouro" id="btnExportarConfirmar" type="button">Gerar documento</button>
     </footer>

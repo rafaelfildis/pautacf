@@ -1,29 +1,44 @@
 /* PAUTA CF — orquestração das exportações.
  *
- * Reúne modal de configuração, pré-visualização (computador e celular),
- * impressão e download. Cada formato é um componente próprio; nada aqui captura
- * a tela do sistema — os documentos são construídos do zero a partir dos dados.
+ * A escolha do usuário tem dois eixos independentes:
+ *
+ *   FORMATO     PDF ou JPEG — o arquivo que sai.
+ *   PLATAFORMA  A4 ou MOBILE — a diagramação do documento.
+ *
+ * As quatro combinações são válidas e passam todas por exportarPauta(), o único
+ * ponto de exportação do sistema. A plataforma escolhida sempre prevalece sobre
+ * o tamanho da tela: pedir A4 num celular devolve o documento de computador, e
+ * pedir MOBILE num computador devolve o documento de celular.
+ *
+ * Nada aqui captura a tela do sistema — os documentos são construídos do zero a
+ * partir dos dados filtrados.
  */
 
 import {
-  MARCA, MODOS_DOCUMENTO, CHAVES_AGRUPAMENTO, VAZIO_RESPONSAVEL,
-  ehDispositivoMovel, gerarNomeArquivo,
+  FORMATOS, MARCA, MODOS_DOCUMENTO, CHAVES_AGRUPAMENTO, PLATAFORMAS,
+  ROTULO_FORMATO, ROTULO_PLATAFORMA,
+  ehFormatoValido, ehPlataformaValida, gerarNomeArquivo, modoDoDocumento,
 } from './formato.js';
 import { montarDocumento, individualizar, padraoPara } from './documento.js';
-import { gerarHTML, PAPEIS } from './doc-html.js';
-import { gerarPDF, PAGINAS_PDF } from './pdf.js';
+import { gerarHTML, LARGURA_A4, PAPEIS } from './doc-html.js';
+import { gerarPDF } from './pdf.js';
 import { gerarJPEG } from './jpeg.js';
 
 const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
 
 /** Larguras de aparelho oferecidas na prévia MOBILE. */
 const LARGURAS_APARELHO = [360, 390, 430];
 
-let contexto = { registros: [], periodo: null, avisar: () => {} };
+/* Seleção corrente dos dois filtros. A barra da tela é a fonte da verdade; o
+   modal apenas reflete e altera estes valores, para que Prévia e Exportar nunca
+   discordem entre si. Padrão inicial: PDF em A4. */
+const selecao = {
+  formato: FORMATOS.pdf,
+  plataforma: PLATAFORMAS.a4,
+};
 
-export function configurarExportacao(fn) {
-  contexto.obterDados = fn;
-}
+let contexto = { obterDados: () => ({ registros: [], periodo: null }), avisar: () => {} };
 
 /* ---------------- download ---------------- */
 
@@ -38,18 +53,28 @@ function baixar(blob, nome) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-/* ---------------- leitura do modal ---------------- */
+/* ---------------- configuração ---------------- */
 
+/**
+ * Monta a configuração completa da exportação.
+ * Parte dos padrões da plataforma escolhida e só deixa o modal sobrescrever os
+ * campos em que o usuário efetivamente mexeu — sem isso o MOBILE sairia com CPF
+ * integral, já que o padrão dele é mascarar.
+ */
 function lerConfiguracao() {
   const v = (id) => $(`#${id}`)?.value ?? '';
-  const c = (id) => !!$(`#${id}`)?.checked;
+  const c = (id) => $(`#${id}`) ? !!$(`#${id}`).checked : true;
+  const tocado = (id) => !!$(`#${id}`)?.dataset.tocado;
+
+  const base = padraoPara(selecao.plataforma);
 
   return {
-    formato: v('expFormato'),
-    orientacao: v('expOrientacao'),
-    visualizacao: v('expVisualizacao'),
+    ...base,
+    formato: selecao.formato,
+    plataforma: selecao.plataforma,
+    orientacao: tocado('expOrientacao') ? v('expOrientacao') : base.orientacao,
+    documentos: tocado('expDocumentos') ? v('expDocumentos') : base.documentos,
     agrupamento: v('expAgrupamento') || CHAVES_AGRUPAMENTO.data,
-    documentos: v('expDocumentos') || MODOS_DOCUMENTO.exibir,
     conteudo: v('expConteudo'),
     papel: v('expPapel'),
     exibirLinks: c('expLinks'),
@@ -67,19 +92,79 @@ function filtrarConteudo(registros, conteudo) {
   return registros;
 }
 
-/** Traduz orientação e papel escolhidos para a chave de página do PDF. */
-function chavePagina(cfg, modo) {
-  if (modo === 'mobile') {
+/** Traduz plataforma e orientação para a chave de página do PDF. */
+function chavePagina(cfg) {
+  if (cfg.plataforma === PLATAFORMAS.mobile) {
+    // Quem prefere folha comum troca no modal; o padrão é a página estreita.
     return cfg.papel === 'a4-retrato' ? 'mobile-a4' : 'mobile';
   }
-  if (cfg.orientacao === 'retrato') return 'completo-retrato';
-  return 'completo';
+  return cfg.orientacao === 'retrato' ? 'completo-retrato' : 'completo';
 }
 
-function papelImpressao(cfg, modo) {
+function papelImpressao(cfg) {
   if (cfg.papel && PAPEIS[cfg.papel]) return cfg.papel;
-  if (modo === 'mobile') return 'a4-retrato';
+  if (cfg.plataforma === PLATAFORMAS.mobile) return 'a4-retrato';
   return cfg.orientacao === 'retrato' ? 'a4-retrato' : 'a4-paisagem';
+}
+
+/**
+ * Nome do arquivo.
+ * No documento de audiência única o nome identifica o cliente, não a pauta —
+ * é o arquivo que será enviado à parte.
+ */
+function nomeDoArquivo(doc, cfg, { escopo = '', tipoEscopo = '', parte = 0, extensao }) {
+  const audiencia = doc.exportacaoIndividual && !escopo
+    ? doc.itens.find((i) => i.subtipo === 'audiencia')
+    : null;
+  const cliente = audiencia?.cliente || audiencia?.parteAutora || '';
+  const individual = !!(audiencia && cliente);
+
+  // Documento de uma audiência só: a data que interessa é a dela, não o
+  // intervalo que o filtro da tela por acaso estava mostrando.
+  const de = individual ? audiencia.inicio : doc.periodo.de;
+  const ate = individual ? audiencia.inicio : doc.periodo.ate;
+
+  return gerarNomeArquivo({
+    de,
+    ate,
+    variante: modoDoDocumento(cfg.plataforma),
+    escopo: individual ? cliente : escopo,
+    tipoEscopo: individual ? 'cliente' : tipoEscopo,
+    parte,
+    extensao,
+  });
+}
+
+/* ---------------- entrega dos arquivos ---------------- */
+
+async function entregarPDF(doc, cfg, escopo = '', tipoEscopo = '') {
+  const { blob, paginas } = await gerarPDF(doc, modoDoDocumento(cfg.plataforma), {
+    pagina: chavePagina(cfg),
+  });
+
+  baixar(blob, nomeDoArquivo(doc, cfg, { escopo, tipoEscopo, extensao: 'pdf' }));
+  return paginas;
+}
+
+async function entregarJPEG(doc, cfg, escopo = '', tipoEscopo = '') {
+  const arquivos = await gerarJPEG(doc, { plataforma: cfg.plataforma });
+
+  for (const { blob, parte, total } of arquivos) {
+    baixar(blob, nomeDoArquivo(doc, cfg, {
+      escopo, tipoEscopo, parte: total > 1 ? parte : 0, extensao: 'jpg',
+    }));
+    // Alguns navegadores descartam downloads simultâneos.
+    await new Promise((r) => setTimeout(r, 350));
+  }
+
+  return arquivos.length;
+}
+
+/** Despacha para o gerador do formato escolhido, sem avisar a tela. */
+function entregar(doc, cfg, escopo = '', tipoEscopo = '') {
+  return cfg.formato === FORMATOS.jpeg
+    ? entregarJPEG(doc, cfg, escopo, tipoEscopo)
+    : entregarPDF(doc, cfg, escopo, tipoEscopo);
 }
 
 /* ---------------- versão escrita ---------------- */
@@ -109,7 +194,7 @@ function montarTexto(doc) {
     L.push('-'.repeat(52));
 
     for (const item of grupo.itens) {
-      L.push(`${item.horario} · ${item.modalidade}`);
+      L.push(`${item.data} · ${item.horario} · ${item.modalidade}`);
       L.push(`  Autora: ${item.parteAutora}`);
       L.push(`  Ré: ${item.parteRe}`);
       L.push(`  Processo: ${item.processo}`);
@@ -119,6 +204,14 @@ function montarTexto(doc) {
       if (item.link) L.push(`  Acesso: ${item.link}`);
       L.push('');
     }
+  }
+
+  // Mesma regra dos demais formatos: só na audiência única.
+  if (doc.observacoes.length) {
+    L.push(doc.tituloObservacoes);
+    L.push('-'.repeat(52));
+    doc.observacoes.forEach((texto, i) => L.push(`${i + 1}. ${texto}`));
+    L.push('');
   }
 
   L.push('='.repeat(52));
@@ -161,33 +254,37 @@ function fecharPrevia() {
   $('#modalPrevia')?.close();
 }
 
-async function abrirPrevia(doc, modo, cfg) {
+/**
+ * Abre a prévia na plataforma selecionada.
+ * O modo vem sempre de cfg.plataforma — nunca do tamanho da tela.
+ */
+async function abrirPrevia(doc, cfg) {
   const modal = $('#modalPrevia');
   const palco = $('#previaPalco');
   const controles = $('#previaControles');
+  const modo = modoDoDocumento(cfg.plataforma);
+  const ehMobile = modo === 'mobile';
 
-  $('#previaTitulo').textContent = modo === 'mobile'
-    ? 'Prévia MOBILE'
-    : 'Prévia completa';
+  $('#previaTitulo').textContent = ehMobile ? 'Prévia MOBILE' : 'Prévia A4';
 
   const larguraInicial = 390;
   const html = await gerarHTML(doc, modo, {
-    papel: papelImpressao(cfg, modo),
-    larguraMobile: modo === 'mobile' ? larguraInicial : 0,
+    papel: papelImpressao(cfg),
+    larguraMobile: ehMobile ? larguraInicial : 0,
   });
 
   palco.replaceChildren();
   controles.replaceChildren();
 
   const quadro = document.createElement('div');
-  quadro.className = modo === 'mobile' ? 'previa-moldura' : 'previa-folha';
+  quadro.className = ehMobile ? 'previa-moldura' : 'previa-folha';
 
   const iframe = document.createElement('iframe');
   iframe.className = 'previa-iframe';
   iframe.title = 'Pré-visualização do documento';
   iframe.srcdoc = html;
 
-  if (modo === 'mobile') {
+  if (ehMobile) {
     const entalhe = document.createElement('span');
     entalhe.className = 'previa-moldura__notch';
     quadro.appendChild(entalhe);
@@ -199,7 +296,7 @@ async function abrirPrevia(doc, modo, cfg) {
 
   /* --- controles --- */
 
-  if (modo === 'mobile') {
+  if (ehMobile) {
     const grupo = document.createElement('div');
     grupo.className = 'previa-larguras';
 
@@ -208,7 +305,7 @@ async function abrirPrevia(doc, modo, cfg) {
       [...grupo.querySelectorAll('button')].forEach((b) => b.classList.remove('ativo'));
       botao.classList.add('ativo');
       iframe.srcdoc = await gerarHTML(doc, 'mobile', {
-        papel: papelImpressao(cfg, 'mobile'),
+        papel: papelImpressao(cfg),
         larguraMobile: largura,
       });
     };
@@ -250,180 +347,235 @@ async function abrirPrevia(doc, modo, cfg) {
     return b;
   };
 
+  const rotuloPlataforma = ROTULO_PLATAFORMA[cfg.plataforma];
+
   acoes.append(
-    botao(modo === 'mobile' ? 'Imprimir MOBILE' : 'Imprimir', 'btn--escuro', () => {
-      gerarHTML(doc, modo, { papel: papelImpressao(cfg, modo) }).then(imprimirHTML);
+    botao(`Imprimir ${rotuloPlataforma}`, 'btn--escuro', () => {
+      gerarHTML(doc, modo, { papel: papelImpressao(cfg) }).then(imprimirHTML);
     }),
-    botao(modo === 'mobile' ? 'Exportar PDF MOBILE' : 'Exportar PDF', 'btn--ouro', async () => {
-      await executar({ ...cfg, formato: modo === 'mobile' ? 'pdf-mobile' : 'pdf-completo' }, doc);
-    }),
-    botao('Exportar JPEG', 'btn--escuro', async () => {
-      await executar({ ...cfg, formato: 'jpeg' }, doc);
-    })
+    botao(`Exportar PDF ${rotuloPlataforma}`, 'btn--ouro', () => (
+      comAviso(() => entregarComAviso(doc, { ...cfg, formato: FORMATOS.pdf }))
+    )),
+    botao(`Exportar JPEG ${rotuloPlataforma}`, 'btn--escuro', () => (
+      comAviso(() => entregarComAviso(doc, { ...cfg, formato: FORMATOS.jpeg }))
+    ))
   );
 
   controles.appendChild(acoes);
 
   if (!modal.open) modal.showModal();
+
+  /* Numa tela estreita a folha A4 inteira não cabe na moldura. Em vez de
+     recortar o documento ou deixá-lo rolar de lado, ela é reduzida
+     proporcionalmente: o que se vê continua sendo a diagramação de computador,
+     apenas menor — exatamente como o arquivo que será gerado.
+     A medida só vale depois do showModal(): antes disso o diálogo está fechado
+     e a moldura ainda não tem largura. */
+  if (!ehMobile) {
+    const fator = Math.min(1, quadro.clientWidth / LARGURA_A4);
+
+    if (fator > 0 && fator < 1) {
+      iframe.style.width = `${LARGURA_A4}px`;
+      iframe.style.height = `${quadro.clientHeight / fator}px`;
+      iframe.style.transformOrigin = 'top left';
+      iframe.style.transform = `scale(${fator})`;
+    }
+  }
 }
 
 /* ---------------- execução ---------------- */
 
-async function entregarPDF(doc, modo, cfg, escopo = '', tipoEscopo = '') {
-  const { blob, paginas } = await gerarPDF(doc, modo, { pagina: chavePagina(cfg, modo) });
+/** Entrega o arquivo e anuncia o resultado na tela. */
+async function entregarComAviso(doc, cfg) {
+  const quantidade = await entregar(doc, cfg);
+  const rotulo = `${ROTULO_FORMATO[cfg.formato]} ${ROTULO_PLATAFORMA[cfg.plataforma]}`;
 
-  const nome = gerarNomeArquivo({
-    de: doc.periodo.de,
-    ate: doc.periodo.ate,
-    variante: modo === 'mobile' ? 'mobile' : 'completo',
-    escopo,
-    tipoEscopo,
-    extensao: 'pdf',
-  });
-
-  baixar(blob, nome);
-  return paginas;
-}
-
-async function entregarJPEG(doc, escopo = '') {
-  const arquivos = await gerarJPEG(doc);
-
-  for (const { blob, parte, total } of arquivos) {
-    const nome = gerarNomeArquivo({
-      de: doc.periodo.de,
-      ate: doc.periodo.ate,
-      variante: 'jpeg',
-      escopo,
-      parte: total > 1 ? parte : 0,
-      extensao: 'jpg',
-    });
-    baixar(blob, nome);
-    // Alguns navegadores descartam downloads simultâneos.
-    await new Promise((r) => setTimeout(r, 350));
+  if (cfg.formato === FORMATOS.jpeg) {
+    contexto.avisar(quantidade > 1
+      ? `${rotulo} gerado em ${quantidade} partes.`
+      : `${rotulo} gerado.`);
+    return;
   }
 
-  return arquivos.length;
+  contexto.avisar(`${rotulo} gerado com ${quantidade} página${quantidade > 1 ? 's' : ''}.`);
 }
 
 /**
- * Executa o formato escolhido.
- * @param {object} cfg configuração do modal
- * @param {object} [documentoPronto] reaproveitado quando vem da prévia
+ * Ponto único de exportação — todo caminho da interface passa por aqui.
+ *
+ * @param {object} opcoes
+ * @param {'arquivo'|'previa'|'imprimir'|'texto'} [opcoes.destino] o que fazer
+ *        com o documento pronto
+ * @param {object} [opcoes.cfg] configuração; por padrão a seleção atual da tela
+ * @param {object} [opcoes.documento] documento já montado, reaproveitado quando
+ *        a ação vem de dentro da prévia
  */
-async function executar(cfg, documentoPronto = null) {
+async function exportarPauta({ destino = 'arquivo', cfg = null, documento = null } = {}) {
+  const config = cfg || lerConfiguracao();
   const { registros, periodo } = contexto.obterDados();
-  const selecionados = filtrarConteudo(registros, cfg.conteudo);
 
-  if (!selecionados.length && cfg.formato !== 'texto') {
+  // A exportação respeita exatamente os filtros da tela — período, busca, tipo,
+  // responsável e modalidade já vêm aplicados em `registros`.
+  const selecionados = filtrarConteudo(registros, config.conteudo);
+
+  if (!selecionados.length && destino !== 'texto') {
     contexto.avisar('Nenhum registro para exportar com os filtros atuais.', true);
     return;
   }
 
-  /* --- documentos individualizados --- */
-  if (cfg.individualizarPor && cfg.formato !== 'texto') {
-    const lotes = individualizar(selecionados, periodo, cfg);
-    const modo = cfg.formato === 'pdf-mobile' ? 'mobile' : 'completo';
+  /* --- documentos individualizados (só na geração de arquivo) --- */
+  if (destino === 'arquivo' && config.individualizarPor) {
+    const lotes = individualizar(selecionados, periodo, config);
 
-    for (const { escopo, documento } of lotes) {
-      if (cfg.formato === 'jpeg') await entregarJPEG(documento, escopo);
-      else await entregarPDF(documento, modo, cfg, escopo, cfg.individualizarPor);
+    for (const { escopo, documento: doc } of lotes) {
+      await entregar(doc, config, escopo, config.individualizarPor);
       await new Promise((r) => setTimeout(r, 350));
     }
 
-    contexto.avisar(`${lotes.length} documento${lotes.length > 1 ? 's' : ''} gerado${lotes.length > 1 ? 's' : ''}.`);
+    const plural = lotes.length > 1 ? 's' : '';
+    contexto.avisar(`${lotes.length} documento${plural} gerado${plural}.`);
     return;
   }
 
-  const doc = documentoPronto || montarDocumento(selecionados, periodo, cfg);
+  const doc = documento || montarDocumento(selecionados, periodo, config);
 
-  switch (cfg.formato) {
-    case 'pdf-completo': {
-      const p = await entregarPDF(doc, 'completo', cfg);
-      contexto.avisar(`PDF gerado com ${p} página${p > 1 ? 's' : ''}.`);
+  switch (destino) {
+    case 'previa':
+      await abrirPrevia(doc, config);
+      break;
+
+    case 'imprimir': {
+      const html = await gerarHTML(doc, modoDoDocumento(config.plataforma), {
+        papel: papelImpressao(config),
+      });
+      if (imprimirHTML(html)) {
+        contexto.avisar(`Janela de impressão ${ROTULO_PLATAFORMA[config.plataforma]} aberta.`);
+      }
       break;
     }
 
-    case 'pdf-mobile': {
-      const p = await entregarPDF(doc, 'mobile', cfg);
-      contexto.avisar(`PDF MOBILE gerado com ${p} página${p > 1 ? 's' : ''}.`);
-      break;
-    }
-
-    case 'imprimir-completo': {
-      const html = await gerarHTML(doc, 'completo', { papel: papelImpressao(cfg, 'completo') });
-      if (imprimirHTML(html)) contexto.avisar('Janela de impressão aberta.');
-      break;
-    }
-
-    case 'imprimir-mobile': {
-      const html = await gerarHTML(doc, 'mobile', { papel: papelImpressao(cfg, 'mobile') });
-      if (imprimirHTML(html)) contexto.avisar('Janela de impressão MOBILE aberta.');
-      break;
-    }
-
-    case 'jpeg': {
-      const n = await entregarJPEG(doc);
-      contexto.avisar(n > 1 ? `JPEG gerado em ${n} partes.` : 'JPEG gerado.');
-      break;
-    }
-
-    case 'previa-completa':
-      await abrirPrevia(doc, 'completo', cfg);
-      break;
-
-    case 'previa-mobile':
-      await abrirPrevia(doc, 'mobile', cfg);
-      break;
-
-    case 'texto': {
+    case 'texto':
       $('#saidaTexto').value = montarTexto(doc);
       $('#modalTexto').showModal();
       break;
-    }
 
     default:
-      contexto.avisar('Formato não reconhecido.', true);
+      await entregarComAviso(doc, config);
   }
+}
+
+/** Envolve uma ação assíncrona para que falhas apareçam como aviso na tela. */
+async function comAviso(acao) {
+  try {
+    await acao();
+  } catch (erro) {
+    contexto.avisar(`Falha na exportação: ${erro.message}`, true);
+  }
+}
+
+/* ---------------- seleção de formato e plataforma ---------------- */
+
+function pintarSegmento(idGrupo, atributo, valor) {
+  for (const botao of $$(`#${idGrupo} [data-${atributo}]`)) {
+    const ativo = botao.dataset[atributo] === valor;
+    botao.classList.toggle('segmento__opcao--ativa', ativo);
+    botao.setAttribute('aria-checked', String(ativo));
+  }
+}
+
+/** Mostra apenas os controles do modal que fazem sentido para a seleção. */
+function ajustarModal() {
+  const ehMobile = selecao.plataforma === PLATAFORMAS.mobile;
+
+  // A orientação existe só no A4: no MOBILE a página estreita é a definição.
+  const linhaOrientacao = $('#linhaOrientacao');
+  if (linhaOrientacao) linhaOrientacao.hidden = ehMobile;
+
+  // Documento que circula por celular vai mascarado por padrão.
+  const documentos = $('#expDocumentos');
+  if (documentos && !documentos.dataset.tocado) {
+    documentos.value = ehMobile ? MODOS_DOCUMENTO.mascarar : MODOS_DOCUMENTO.exibir;
+  }
+
+  const orientacao = $('#expOrientacao');
+  if (orientacao && !orientacao.dataset.tocado) {
+    orientacao.value = ehMobile ? 'retrato' : 'paisagem';
+  }
+}
+
+/** Reflete a seleção corrente na barra da tela e no modal. */
+function sincronizarSelecao() {
+  pintarSegmento('grupoFormato', 'formato', selecao.formato);
+  pintarSegmento('grupoPlataforma', 'plataforma', selecao.plataforma);
+
+  const formato = $('#expFormato');
+  if (formato) formato.value = selecao.formato;
+
+  const plataforma = $('#expPlataforma');
+  if (plataforma) plataforma.value = selecao.plataforma;
+
+  const botao = $('#btnExportar');
+  if (botao) {
+    botao.textContent = `Exportar ${ROTULO_FORMATO[selecao.formato]} · ${ROTULO_PLATAFORMA[selecao.plataforma]}`;
+  }
+
+  ajustarModal();
+}
+
+function definirFormato(valor) {
+  if (!ehFormatoValido(valor) || valor === selecao.formato) return;
+  selecao.formato = valor;
+  sincronizarSelecao();
+}
+
+function definirPlataforma(valor) {
+  if (!ehPlataformaValida(valor) || valor === selecao.plataforma) return;
+  selecao.plataforma = valor;
+  sincronizarSelecao();
+}
+
+/** Liga um grupo de botões segmentados, com teclado e clique. */
+function ligarSegmento(idGrupo, atributo, escolher) {
+  const grupo = $(`#${idGrupo}`);
+  if (!grupo) return;
+
+  grupo.addEventListener('click', (evento) => {
+    const botao = evento.target.closest(`[data-${atributo}]`);
+    if (botao) escolher(botao.dataset[atributo]);
+  });
+
+  grupo.addEventListener('keydown', (evento) => {
+    if (evento.key !== 'ArrowLeft' && evento.key !== 'ArrowRight') return;
+
+    const botoes = [...grupo.querySelectorAll(`[data-${atributo}]`)];
+    const atual = botoes.findIndex((b) => b.getAttribute('aria-checked') === 'true');
+    const proximo = botoes[(atual + (evento.key === 'ArrowRight' ? 1 : -1) + botoes.length) % botoes.length];
+
+    evento.preventDefault();
+    escolher(proximo.dataset[atributo]);
+    proximo.focus();
+  });
 }
 
 /* ---------------- modal de configuração ---------------- */
 
-/** Mostra apenas os controles que fazem sentido para o formato escolhido. */
-function ajustarModal() {
-  const formato = $('#expFormato').value;
-  const ehMobile = /mobile|jpeg/.test(formato);
-  const ehTexto = formato === 'texto';
-  const ehImpressao = formato.startsWith('imprimir');
-  const ehImagem = formato === 'jpeg';
-
-  $('#linhaOrientacao').hidden = ehTexto || ehImagem;
-  $('#linhaPapel').hidden = !ehImpressao;
-  $('#linhaIndividualizar').hidden = ehTexto;
-  $('#linhaVisualizacao').hidden = ehTexto;
-
-  // Documento que sai do escritório por celular vai mascarado por padrão.
-  if (!$('#expDocumentos').dataset.tocado) {
-    $('#expDocumentos').value = ehMobile ? MODOS_DOCUMENTO.mascarar : MODOS_DOCUMENTO.exibir;
-  }
-
-  if (!$('#expOrientacao').dataset.tocado) {
-    $('#expOrientacao').value = ehMobile ? 'retrato' : 'paisagem';
-  }
-
-  if (!$('#expVisualizacao').dataset.tocado) {
-    $('#expVisualizacao').value = ehImagem ? 'whatsapp' : ehMobile ? 'celular' : ehImpressao ? 'impressao' : 'computador';
-  }
-}
-
-export function abrirModalExportacao(formatoInicial = '') {
+export function abrirModalExportacao() {
   const modal = $('#modalExportar');
-
-  if (formatoInicial) $('#expFormato').value = formatoInicial;
-  ajustarModal();
+  sincronizarSelecao();
 
   const { registros } = contexto.obterDados();
-  $('#expResumo').textContent = `${registros.length} registro${registros.length === 1 ? '' : 's'} no período e filtros atuais.`;
+  const audiencias = registros.filter((r) => r.subtipo === 'audiencia').length;
 
+  /* O aviso da audiência única é a mesma regra do documento: contagem final de
+     audiências incluídas, não o texto digitado na busca. */
+  const resumo = [
+    `${registros.length} registro${registros.length === 1 ? '' : 's'} no período e filtros atuais.`,
+    audiencias === 1
+      ? 'Uma única audiência: o documento sairá com o bloco OBSERVAÇÕES IMPORTANTES.'
+      : '',
+  ].filter(Boolean).join(' ');
+
+  $('#expResumo').textContent = resumo;
   modal.showModal();
 }
 
@@ -432,76 +584,44 @@ export function abrirModalExportacao(formatoInicial = '') {
 export function ligarExportacao({ obterDados, avisar }) {
   contexto = { obterDados, avisar };
 
-  $('#expFormato').addEventListener('change', ajustarModal);
+  /* --- filtros de formato e plataforma --- */
+
+  ligarSegmento('grupoFormato', 'formato', definirFormato);
+  ligarSegmento('grupoPlataforma', 'plataforma', definirPlataforma);
+
+  $('#expFormato')?.addEventListener('change', (e) => definirFormato(e.target.value));
+  $('#expPlataforma')?.addEventListener('change', (e) => definirPlataforma(e.target.value));
 
   // Marca os campos que o usuário mexeu para não sobrescrever a escolha dele.
-  for (const id of ['expDocumentos', 'expOrientacao', 'expVisualizacao']) {
-    $(`#${id}`).addEventListener('change', (e) => { e.target.dataset.tocado = '1'; });
+  for (const id of ['expDocumentos', 'expOrientacao']) {
+    $(`#${id}`)?.addEventListener('change', (e) => { e.target.dataset.tocado = '1'; });
   }
 
-  $('#btnExportarConfirmar').addEventListener('click', async (e) => {
-    e.preventDefault();
+  /* --- ações da barra da tela --- */
+
+  $('#btnExportar')?.addEventListener('click', () => comAviso(() => exportarPauta()));
+  $('#btnPrevia')?.addEventListener('click', () => comAviso(() => exportarPauta({ destino: 'previa' })));
+  $('#btnImprimir')?.addEventListener('click', () => comAviso(() => exportarPauta({ destino: 'imprimir' })));
+  $('#btnTexto')?.addEventListener('click', () => comAviso(() => exportarPauta({ destino: 'texto' })));
+  $('#btnAbrirExportacao')?.addEventListener('click', () => abrirModalExportacao());
+
+  /* --- ações do modal --- */
+
+  const doModal = (destino) => async (evento) => {
+    evento.preventDefault();
     const cfg = lerConfiguracao();
     $('#modalExportar').close();
-    try {
-      await executar(cfg);
-    } catch (erro) {
-      contexto.avisar(`Falha na exportação: ${erro.message}`, true);
-    }
-  });
-
-  $('#btnPreviaCompleta').addEventListener('click', async (e) => {
-    e.preventDefault();
-    const cfg = lerConfiguracao();
-    $('#modalExportar').close();
-    const { registros, periodo } = contexto.obterDados();
-    await abrirPrevia(montarDocumento(filtrarConteudo(registros, cfg.conteudo), periodo, cfg), 'completo', cfg);
-  });
-
-  $('#btnPreviaMobile').addEventListener('click', async (e) => {
-    e.preventDefault();
-    const cfg = lerConfiguracao();
-    $('#modalExportar').close();
-    const { registros, periodo } = contexto.obterDados();
-    await abrirPrevia(montarDocumento(filtrarConteudo(registros, cfg.conteudo), periodo, cfg), 'mobile', cfg);
-  });
-
-  $('#fecharPrevia').addEventListener('click', fecharPrevia);
-
-  // Atalhos diretos da barra de exportação
-  const atalhos = {
-    btnPdfCompleto: 'pdf-completo',
-    btnPdfMobile: 'pdf-mobile',
-    btnImprimirCompleto: 'imprimir-completo',
-    btnImprimirMobile: 'imprimir-mobile',
-    btnJpeg: 'jpeg',
-    btnTexto: 'texto',
+    await comAviso(() => exportarPauta({ destino, cfg }));
   };
 
-  for (const [id, formato] of Object.entries(atalhos)) {
-    $(`#${id}`)?.addEventListener('click', async () => {
-      const base = padraoPara(formato);
-      const cfg = { ...base, ...lerConfiguracao(), formato };
+  $('#btnExportarConfirmar')?.addEventListener('click', doModal('arquivo'));
+  $('#btnPreviaModal')?.addEventListener('click', doModal('previa'));
+  $('#btnImprimirModal')?.addEventListener('click', doModal('imprimir'));
+  $('#btnTextoModal')?.addEventListener('click', doModal('texto'));
 
-      // No atalho o modal nem foi aberto: o padrão do formato tem de prevalecer
-      // sobre o valor inicial dos campos, senão o PDF MOBILE sairia com CPF
-      // integral quando o padrão dele é mascarar.
-      for (const [campo, id2] of [['documentos', 'expDocumentos'], ['orientacao', 'expOrientacao']]) {
-        if (!$(`#${id2}`).dataset.tocado) cfg[campo] = base[campo];
-      }
-      try {
-        await executar(cfg);
-      } catch (erro) {
-        contexto.avisar(`Falha na exportação: ${erro.message}`, true);
-      }
-    });
-  }
+  $('#fecharPrevia')?.addEventListener('click', fecharPrevia);
 
-  $('#btnPreviaRapida')?.addEventListener('click', () => {
-    abrirModalExportacao(ehDispositivoMovel() ? 'previa-mobile' : 'previa-completa');
-  });
-
-  $('#btnAbrirExportacao')?.addEventListener('click', () => abrirModalExportacao());
+  sincronizarSelecao();
 }
 
 export { montarTexto };

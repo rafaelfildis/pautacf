@@ -370,7 +370,70 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
 .exportar__info strong { color: var(--ouro-300); font-size: 14.5px; font-weight: 600; }
 .exportar__info span { color: var(--prata-400); font-size: 12.5px; }
 
-.exportar__botoes { display: flex; gap: 9px; flex-wrap: wrap; }
+/* Formato, plataforma e ações lado a lado: são três decisões distintas e cada
+   uma ganha o próprio rótulo. */
+.exportar__controles {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.grupo-filtro { display: flex; flex-direction: column; gap: 6px; }
+
+.grupo-filtro__rotulo {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--prata-400);
+}
+
+.grupo-filtro__acoes { display: flex; gap: 9px; flex-wrap: wrap; }
+
+/* Botões segmentados — mesma linguagem das abas de período. */
+.segmento {
+  display: inline-flex;
+  background: rgba(7, 16, 34, 0.6);
+  border: 1px solid rgba(168, 176, 189, 0.16);
+  border-radius: var(--raio-pequeno);
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmento__opcao {
+  min-width: 74px;
+  padding: 7px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--prata-400);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: background var(--transicao), color var(--transicao);
+}
+
+.segmento__opcao:hover { color: var(--ouro-300); }
+
+.segmento__opcao--ativa {
+  background: linear-gradient(180deg, var(--ouro-500), var(--ouro-600));
+  color: var(--marinho-900);
+}
+
+.segmento__opcao:focus-visible { outline: 2px solid var(--ouro-300); outline-offset: 1px; }
+
+/* Impressão e versão escrita continuam disponíveis, um degrau abaixo dos dois
+   filtros principais. */
+.exportar__secundario {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid rgba(168, 176, 189, 0.14);
+}
 
 /* ================= Tabela ================= */
 
@@ -754,7 +817,12 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
   .conteudo { padding: 16px 14px 48px; }
   .filtros__refino { justify-content: flex-start; }
   .exportar { flex-direction: column; align-items: stretch; }
-  .exportar__botoes .btn { flex: 1 1 auto; justify-content: center; }
+  .exportar__controles { gap: 12px 18px; }
+  .grupo-filtro { flex: 1 1 180px; }
+  .segmento { width: 100%; }
+  .segmento__opcao { flex: 1; }
+  .grupo-filtro__acoes .btn { flex: 1 1 auto; justify-content: center; }
+  .exportar__secundario .btn { flex: 1 1 auto; justify-content: center; }
 }
 
 @media (max-width: 620px) {

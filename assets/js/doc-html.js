@@ -5,7 +5,11 @@
  * abre em janela nova e precisa funcionar sem depender de caminhos relativos.
  */
 
-import { ICONE_MODALIDADE, MARCA, VAZIO_RESPONSAVEL } from './formato.js';
+import { ICONE_MODALIDADE, MARCA } from './formato.js';
+
+/* Largura de referência do documento A4: é ela que garante a diagramação de
+   computador mesmo quando a prévia está aberta num celular. */
+export const LARGURA_A4 = 1180;
 
 const CAMINHO_CSS = 'assets/css/documento.css';
 
@@ -150,8 +154,14 @@ function card(item) {
        </div>`
     : '';
 
+  // Sem cabeçalho de dia à vista, a data só aparece se o card a trouxer.
+  const data = item.mostrarData
+    ? `<div class="doc-card__data">${esc(item.dataLonga)}</div>`
+    : '';
+
   return `
 <article class="doc-card doc-card--${classeModalidade(item)}${item.temResponsavel ? '' : ' doc-card--sem-resp'}">
+  ${data}
   <div class="doc-card__topo">
     <span class="doc-card__hora">${esc(item.horario)}</span>
     ${etiqueta(item)}
@@ -233,6 +243,24 @@ function tabelaGrupo(grupo) {
 
 /* ---------------- documento ---------------- */
 
+/**
+ * Bloco de orientações do documento de audiência única.
+ * Devolve string vazia na pauta coletiva — decisão já tomada em documento.js.
+ */
+function observacoes(doc) {
+  if (!doc.observacoes?.length) return '';
+
+  const itens = doc.observacoes
+    .map((texto) => `<li>${esc(texto)}</li>`)
+    .join('');
+
+  return `
+<section class="doc-obs">
+  <h2 class="doc-obs__titulo">${esc(doc.tituloObservacoes)}</h2>
+  <ol class="doc-obs__lista">${itens}</ol>
+</section>`;
+}
+
 function rodape(doc) {
   return `
 <footer class="doc-rodape">
@@ -267,29 +295,47 @@ export async function gerarHTML(doc, modo, opcoes = {}) {
 
   const papel = PAPEIS[opcoes.papel] || PAPEIS[modo === 'mobile' ? 'a4-retrato' : 'a4-paisagem'];
   const regraPagina = `@page { size: ${papel.css}; margin: ${papel.margem}; }`;
+  const ehA4 = modo !== 'mobile';
+
+  /* O documento A4 é diagramado para computador, e continua assim mesmo quando
+     a prévia é aberta num celular: o viewport fixo faz o navegador montar a
+     página em 1180 px e depois reduzi-la para caber na tela, em vez de
+     recalcular a tipografia em vw e devolver um layout de celular.
+     A classe .doc--fixo (em documento.css) desliga os clamp() dependentes de vw. */
+  const viewport = ehA4
+    ? `<meta name="viewport" content="width=${LARGURA_A4}">`
+    : '<meta name="viewport" content="width=device-width, initial-scale=1">';
 
   // A prévia MOBILE trava a largura para representar fielmente o aparelho.
-  const larguraMobile = opcoes.larguraMobile
+  const larguraMobile = !ehA4 && opcoes.larguraMobile
     ? `.doc--mobile { max-width: ${opcoes.larguraMobile}px; }`
+    : '';
+
+  const larguraA4 = ehA4
+    ? `html, body { min-width: ${LARGURA_A4}px; }
+       .doc--completo { width: ${LARGURA_A4}px; max-width: none; }
+       @media print { html, body { min-width: 0; } .doc--completo { width: auto; } }`
     : '';
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+${viewport}
 <title>${esc(MARCA.titulo)} — ${esc(doc.periodo.rotulo)}</title>
 <style>
 ${css}
 ${regraPagina}
+${larguraA4}
 ${larguraMobile}
 </style>
 </head>
 <body>
-<div class="doc doc--${modo}">
+<div class="doc doc--${modo}${ehA4 ? ' doc--fixo' : ''}">
   ${cabecalho(doc, logo)}
   ${resumoExecutivo(doc)}
   ${corpo(doc, modo)}
+  ${observacoes(doc)}
   ${rodape(doc)}
 </div>
 </body>

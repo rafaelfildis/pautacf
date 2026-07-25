@@ -37,13 +37,26 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 - **Modalidade, cidade e link editáveis** — o Astrea não fornece esses campos de forma
   padronizada, então a cidade é deduzida do foro, a modalidade já vem como *Virtual*
   (troque nas exceções) e o link é extraído do texto quando existe.
-- **Seis formatos de saída**, cada um com documento próprio — nenhum é captura da tela:
-  PDF completo (A4 paisagem, texto nativo), PDF MOBILE (cards em página estreita),
-  impressão completa, impressão MOBILE, JPEG vertical para WhatsApp e versão escrita.
-- **Modal de exportação** com orientação, papel, agrupamento (data, responsável, cidade
-  ou cliente), política de CPF/CNPJ e geração de documentos individualizados.
-- **Pré-visualização** em moldura de aparelho, alternando entre 360, 390 e 430 px.
+- **Exportação em dois eixos independentes**, escolhidos por filtro na própria barra:
+  **Formato** (PDF ou JPEG) e **Plataforma** (A4 ou MOBILE). As quatro combinações são
+  válidas, e o botão *Exportar* aplica a seleção sobre os registros que estão na tela.
+  Padrão inicial: PDF em A4.
+- **A plataforma prevalece sobre o tamanho da tela.** Pedir A4 num celular devolve o
+  documento de computador — página A4, colunas completas, tipografia de leitura — e
+  pedir MOBILE num computador devolve o documento de celular. A responsividade da
+  interface nunca troca o tipo de documento escolhido.
+- **Bloco OBSERVAÇÕES IMPORTANTES** nos documentos que contêm uma única audiência, com
+  as orientações à parte (testar o link, documento com foto, 5 minutos de antecedência,
+  consequência da ausência injustificada). Na pauta coletiva ele não aparece.
+- **Impressão e versão escrita** continuam disponíveis como ações, seguindo a mesma
+  plataforma selecionada.
+- **Modal de mais opções** com orientação do A4, papel da impressão, agrupamento (data,
+  responsável, cidade ou cliente), política de CPF/CNPJ e documentos individualizados.
+- **Pré-visualização** que respeita a plataforma escolhida: moldura de aparelho no
+  MOBILE (360, 390 e 430 px) e folha reduzida proporcionalmente no A4.
 - **Funciona offline** com a última cópia sincronizada.
+
+Nenhuma saída é captura da tela: todos os documentos são construídos a partir dos dados.
 
 ### Como executar
 
@@ -83,15 +96,20 @@ assets/js/store.js        persistência local (responsáveis, modalidade, equipe
 assets/js/formato.js      constantes da marca, formatação, máscaras, agrupamento
 assets/js/documento.js    modelo do documento, comum a todos os formatos
 assets/js/doc-html.js     documentos HTML (prévia e impressão)
-assets/js/pdf.js          PDF com texto nativo — completo e MOBILE
-assets/js/jpeg.js         JPEG vertical em partes
-assets/js/exportar.js     modal, prévia, impressão e downloads
+assets/js/pdf.js          PDF com texto nativo — A4 e MOBILE
+assets/js/jpeg.js         JPEG — tabela em A4 e cards em MOBILE
+assets/js/exportar.js     filtros de formato/plataforma, prévia, impressão e downloads
 assets/js/app.js          controlador: filtros, tabela e sincronização
 ```
 
 O fluxo é sempre o mesmo: a tela entrega os registros filtrados, `documento.js`
-monta um modelo único (grupos, resumo, privacidade aplicada) e cada renderizador
-consome esse modelo. Nenhum formato depende do layout da tela.
+monta um modelo único (grupos, resumo, privacidade aplicada, bloco de observações) e
+cada renderizador consome esse modelo. Nenhum formato depende do layout da tela.
+
+Toda a exportação passa por um único ponto, `exportarPauta()` em `exportar.js`, que
+recebe o formato, a plataforma e o destino (arquivo, prévia, impressão ou texto).
+Barra da tela, modal e prévia são apenas maneiras diferentes de chamá-lo, o que impede
+que *Prévia* e *Exportar* discordem entre si.
 
 ### Notas técnicas
 
@@ -117,10 +135,23 @@ consome esse modelo. Nenhum formato depende do layout da tela.
   sugeridos. Cabem 3 apenas reduzindo a fonte ou cortando campos; como as próprias
   regras pedem para não forçar a densidade nem diminuir a tipografia, a legibilidade
   prevaleceu. Quem preferir papel comum tem a opção *A4 retrato* no modal.
-- **JPEG dividido em partes.** Cada parte tem 1080 px de largura e no máximo 4000 px de
-  altura; a quebra respeita os limites dos cards e nunca deixa cabeçalho de dia órfão.
-- **CPF e CNPJ mascarados por padrão** em PDF MOBILE, impressão MOBILE e JPEG, que são
-  os formatos que circulam por celular. O modal permite exibir ou ocultar.
+- **JPEG dividido em partes.** No MOBILE cada parte tem 1080 px de largura e no máximo
+  4000 px de altura. No A4 são 2400 × 1700 px, a proporção da folha em paisagem, com a
+  mesma tabela do PDF. A quebra respeita os limites de card ou de linha e nunca deixa
+  cabeçalho de dia órfão.
+- **Etiqueta de modalidade sem ícone na tabela A4.** A coluna é estreita e o emoji,
+  largo: com ele, "PRESENCIAL" invadiria a coluna vizinha. Rótulos longos ainda
+  reduzem a fonte em vez de vazar.
+- **CPF e CNPJ mascarados por padrão** na plataforma MOBILE, que é a que circula por
+  celular. O modal permite exibir ou ocultar.
+- **O documento A4 é diagramado em 1180 px fixos.** A folha de estilo dos documentos é
+  mobile first e dimensiona a tipografia em `vw`; num celular isso devolveria um layout
+  de celular mesmo com A4 selecionado. A classe `.doc--fixo` volta os tamanhos para
+  valores fixos e neutraliza os breakpoints, e a prévia reduz a folha inteira em vez de
+  cortá-la.
+- **Nome do arquivo da audiência única** identifica o cliente e a data da própria
+  audiência, não o intervalo do filtro, e é truncado para não estourar o limite de
+  caminho do Windows quando o feed não separa as partes.
 
 ### O que o feed do Astrea não exporta
 

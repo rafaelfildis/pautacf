@@ -225,6 +225,17 @@ body, .doc, .doc * { max-width: 100%; min-width: 0; }
 .doc-card--tarefa, .doc-card--prazo { border-left-color: var(--ouro); }
 .doc-card--sem-resp { background: #fffdf7; }
 
+/* Data no card — só aparece no documento de audiência única, onde o cabeçalho
+   de grupo pode não ser um dia. */
+.doc-card__data {
+  font-size: clamp(9.5px, 2.6vw, 11px);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ouro);
+  margin-bottom: 6px;
+}
+
 .doc-card__topo {
   display: flex;
   align-items: center;
@@ -378,6 +389,41 @@ body, .doc, .doc * { max-width: 100%; min-width: 0; }
 .doc-tabela .cel-alerta { color: var(--alerta); }
 .doc-tabela .cel-acesso a { color: var(--virtual); font-weight: 600; text-decoration: none; }
 
+/* ============ observações importantes (audiência única) ============ */
+
+.doc-obs {
+  margin: 0 18px 18px;
+  background: #fffdf7;
+  border: 1px solid rgba(209, 169, 75, 0.55);
+  border-left: 4px solid var(--ouro);
+  border-radius: var(--raio);
+  padding: 13px 16px 15px;
+  /* O bloco é uma unidade de leitura: partir ao meio tira o sentido dele. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.doc-obs__titulo {
+  margin: 0 0 9px;
+  font-size: clamp(11.5px, 3.2vw, 14px);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--marinho);
+}
+
+.doc-obs__lista {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 5px;
+  font-size: clamp(11px, 3.1vw, 13px);
+  line-height: 1.45;
+  color: var(--texto);
+}
+
+.doc-obs__lista li { overflow-wrap: anywhere; }
+
 /* ============ rodapé ============ */
 
 .doc-rodape {
@@ -412,6 +458,49 @@ body, .doc, .doc * { max-width: 100%; min-width: 0; }
 
 @media (min-width: 769px) {
   .doc--completo { padding: 20px; }
+}
+
+/* ============ documento A4 com diagramação travada ============ *
+
+ A plataforma escolhida pelo usuário prevalece sobre o tamanho da tela: pedir A4
+ num celular tem de devolver o documento de computador. As regras acima são
+ mobile first e dimensionam a tipografia em vw, então aqui os tamanhos voltam a
+ ser fixos e os breakpoints de celular são neutralizados. Dois seletores de
+ classe vencem as media queries sem depender da ordem do arquivo. */
+
+.doc--fixo { padding: 20px; }
+
+.doc--fixo .doc-cab,
+.doc--fixo .doc-resumo,
+.doc--fixo .doc-corpo { padding-left: 18px; padding-right: 18px; }
+
+.doc--fixo .doc-cab { flex-direction: row; text-align: left; gap: 14px; }
+.doc--fixo .doc-cab__meta { text-align: right; }
+.doc--fixo .doc-cab__titulo strong { font-size: 19px; }
+.doc--fixo .doc-cab__titulo span { font-size: 14px; }
+.doc--fixo .doc-cab__meta { font-size: 12px; }
+
+.doc--fixo .doc-resumo { grid-template-columns: repeat(6, 1fr); }
+.doc--fixo .doc-resumo__valor { font-size: 21px; }
+.doc--fixo .doc-resumo__rotulo { font-size: 10px; }
+
+.doc--fixo .doc-grupo__titulo { font-size: 14px; }
+.doc--fixo .doc-grupo__sub { font-size: 12px; }
+.doc--fixo .doc-grupo__contagem { font-size: 11px; }
+
+.doc--fixo .doc-tag { font-size: 11px; }
+.doc--fixo .doc-tabela { font-size: 11.5px; }
+/* Em 1180 px a tabela cabe inteira: rolagem lateral seria falso positivo. */
+.doc--fixo .doc-tabela-envolucro { overflow-x: visible; }
+
+.doc--fixo .doc-obs__titulo { font-size: 14px; }
+.doc--fixo .doc-obs__lista { font-size: 13px; }
+.doc--fixo .doc-rodape { font-size: 10.5px; }
+
+/* No papel a folha já é a moldura; este bloco vem depois do @media print geral
+   e precisa devolver a margem zero que ele havia definido. */
+@media print {
+  .doc--fixo { padding: 0; }
 }
 
 /* ============ impressão ============ */

@@ -40,6 +40,79 @@ export const ICONE_MODALIDADE = {
 export const VAZIO_TEXTO = 'Não informado';
 export const VAZIO_RESPONSAVEL = 'Não definido';
 
+/* ---------------- formato e plataforma da exportação ---------------- */
+
+/* Os dois eixos da exportação são independentes: FORMATO é o arquivo que sai
+   (PDF ou JPEG) e PLATAFORMA é a diagramação (A4 de computador ou MOBILE de
+   celular). As quatro combinações são válidas, e a plataforma escolhida sempre
+   prevalece sobre o tamanho da tela de quem está usando o sistema. */
+
+export const FORMATOS = { pdf: 'pdf', jpeg: 'jpeg' };
+export const PLATAFORMAS = { a4: 'a4', mobile: 'mobile' };
+
+export const ROTULO_FORMATO = { pdf: 'PDF', jpeg: 'JPEG' };
+export const ROTULO_PLATAFORMA = { a4: 'A4', mobile: 'MOBILE' };
+
+/** Nome interno do layout usado por doc-html.js, pdf.js e jpeg.js. */
+export const modoDoDocumento = (plataforma) => (
+  plataforma === PLATAFORMAS.mobile ? 'mobile' : 'completo'
+);
+
+export const ehFormatoValido = (v) => Object.hasOwn(FORMATOS, v);
+export const ehPlataformaValida = (v) => Object.hasOwn(PLATAFORMAS, v);
+
+/* ---------------- colunas do documento A4 ---------------- */
+
+/* Uma única definição para o PDF e para o JPEG em A4: os pesos distribuem a
+   largura útil da página, então as duas saídas têm exatamente as mesmas colunas
+   nas mesmas proporções. */
+export const COLUNAS_PAUTA = [
+  { chave: 'horario', titulo: 'HORÁRIO', peso: 20 },
+  { chave: 'parteAutora', titulo: 'PARTE AUTORA', peso: 40 },
+  { chave: 'parteRe', titulo: 'PARTE RÉ', peso: 40 },
+  { chave: 'processo', titulo: 'PROCESSO', peso: 42 },
+  { chave: 'foro', titulo: 'JUÍZO / VARA', peso: 43 },
+  { chave: 'cidade', titulo: 'CIDADE', peso: 24 },
+  { chave: 'responsavel', titulo: 'RESPONSÁVEL', peso: 26 },
+  { chave: 'modalidade', titulo: 'MODALIDADE', peso: 22 },
+  { chave: 'acesso', titulo: 'ACESSO', peso: 16 },
+];
+
+/** Distribui os pesos das colunas sobre a largura disponível. */
+export function distribuirColunas(largura) {
+  const total = COLUNAS_PAUTA.reduce((s, c) => s + c.peso, 0);
+  let x = 0;
+
+  return COLUNAS_PAUTA.map((c) => {
+    const w = (c.peso / total) * largura;
+    const coluna = { ...c, x, largura: w };
+    x += w;
+    return coluna;
+  });
+}
+
+/** Texto de uma célula da tabela, igual no PDF e no JPEG. */
+export function valorDaCelula(item, chave) {
+  if (chave === 'acesso') return item.link ? 'Entrar' : '—';
+  if (chave === 'modalidade') return '';
+  if (chave === 'foro') return item.foro + (item.foroComplemento ? ` (${item.foroComplemento})` : '');
+  return item[chave] ?? '';
+}
+
+/* ---------------- observações da audiência única ---------------- */
+
+export const TITULO_OBSERVACOES = 'OBSERVAÇÕES IMPORTANTES';
+
+/* Texto fixo, na ordem e na redação aprovadas pelo escritório. Entra apenas nos
+   documentos que contêm uma única audiência — na pauta coletiva repetir isso em
+   cada compromisso só tomaria espaço. */
+export const OBSERVACOES_IMPORTANTES = [
+  'Testar o link da audiência com antecedência;',
+  'Estar com documento oficial com foto em mãos;',
+  'Ingressar no link da audiência com 5 minutos de antecedência;',
+  'Em caso de ausência injustificada, a parte poderá ser condenada ao pagamento de custas processuais.',
+];
+
 /* ---------------- datas e horários ---------------- */
 
 const fmtDataCurtaBR = new Intl.DateTimeFormat('pt-BR', {
@@ -218,12 +291,27 @@ export function resumirGrupo(itens) {
 /** Windows e Android rejeitam estes caracteres em nome de arquivo. */
 const sanitizar = (t) => t.replace(/[\\/:*?"<>|]/g, '').replace(/\s{2,}/g, ' ').trim();
 
+/* Nem sempre o feed separa as partes: quando não separa, o "cliente" vem sendo
+   o título inteiro do evento, e o nome do arquivo estouraria o limite de
+   caminho do Windows. */
+const LIMITE_ESCOPO = 48;
+
+function encurtarEscopo(texto) {
+  const limpo = sanitizar(String(texto || '')).toUpperCase();
+  if (limpo.length <= LIMITE_ESCOPO) return limpo;
+
+  // Corta na última palavra inteira que couber, para não partir um nome ao meio.
+  const corte = limpo.slice(0, LIMITE_ESCOPO);
+  const espaco = corte.lastIndexOf(' ');
+  return (espaco > LIMITE_ESCOPO / 2 ? corte.slice(0, espaco) : corte).trim();
+}
+
 /**
  * Monta o nome do arquivo no padrão institucional.
  * @param {object} opcoes
  * @param {Date} opcoes.de
  * @param {Date} opcoes.ate
- * @param {'completo'|'mobile'|'jpeg'} [opcoes.variante]
+ * @param {'completo'|'mobile'} [opcoes.variante] diagramação, vinda da plataforma
  * @param {string} [opcoes.escopo]  nome do responsável, cliente, cidade…
  * @param {'responsavel'|'cliente'|'data'|'cidade'} [opcoes.tipoEscopo]
  * @param {number} [opcoes.parte]
@@ -241,9 +329,9 @@ export function gerarNomeArquivo({
 
   if (tipoEscopo === 'cliente' && escopo) {
     // Documento de uma audiência específica: identifica o cliente, não a pauta.
-    base = `AUDIÊNCIA - ${escopo.toUpperCase()} - ${periodo}`;
+    base = `AUDIÊNCIA - ${encurtarEscopo(escopo)} - ${periodo}`;
   } else if (escopo) {
-    base = `PAUTA DE AUDIÊNCIAS - ${escopo.toUpperCase()} - ${periodo}`;
+    base = `PAUTA DE AUDIÊNCIAS - ${encurtarEscopo(escopo)} - ${periodo}`;
   } else if (variante === 'mobile') {
     base = `${MARCA.titulo} - MOBILE - ${periodo}`;
   } else {

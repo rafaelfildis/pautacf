@@ -7,15 +7,16 @@
  */
 
 import {
-  MARCA, VAZIO_RESPONSAVEL, VAZIO_TEXTO, MODOS_DOCUMENTO, CHAVES_AGRUPAMENTO,
+  FORMATOS, MARCA, OBSERVACOES_IMPORTANTES, PLATAFORMAS, TITULO_OBSERVACOES,
+  VAZIO_RESPONSAVEL, VAZIO_TEXTO, MODOS_DOCUMENTO, CHAVES_AGRUPAMENTO,
   agrupar, aplicarPrivacidade, formatarCarimbo, formatarData, formatarDataLonga,
   formatarIntervalo, formatarHora, ouVazio, resumirGrupo, separarForo,
 } from './formato.js';
 
 export const CONFIG_PADRAO = {
-  formato: 'pdf-completo',
+  formato: FORMATOS.pdf,
+  plataforma: PLATAFORMAS.a4,
   orientacao: 'auto',
-  visualizacao: 'computador',
   agrupamento: CHAVES_AGRUPAMENTO.data,
   documentos: MODOS_DOCUMENTO.exibir,
   exibirLinks: true,
@@ -23,17 +24,20 @@ export const CONFIG_PADRAO = {
   individualizarPor: '',
 };
 
-/** Ajustes que fazem sentido por si só em cada destino. */
-export function padraoPara(formato) {
-  const ehMobile = formato === 'pdf-mobile' || formato === 'imprimir-mobile' || formato === 'jpeg';
+/**
+ * Ajustes que fazem sentido por si só em cada combinação.
+ * Só a plataforma influencia: o que muda a diagramação é o destino de leitura,
+ * não a extensão do arquivo.
+ */
+export function padraoPara(plataforma) {
+  const ehMobile = plataforma === PLATAFORMAS.mobile;
 
   return {
     ...CONFIG_PADRAO,
-    formato,
-    // Pauta compartilhada por celular circula fora do escritório: mascarar é o
-    // padrão seguro, e continua ajustável no modal.
+    plataforma,
+    // Pauta lida no celular circula fora do escritório: mascarar é o padrão
+    // seguro, e continua ajustável no modal.
     documentos: ehMobile ? MODOS_DOCUMENTO.mascarar : MODOS_DOCUMENTO.exibir,
-    visualizacao: ehMobile ? 'celular' : 'computador',
     orientacao: ehMobile ? 'retrato' : 'paisagem',
   };
 }
@@ -101,6 +105,19 @@ export function montarDocumento(registros, periodo, config) {
   let itens = registros.map((r) => prepararItem(r, cfg));
   if (!cfg.exibirSemResponsavel) itens = itens.filter((i) => i.temResponsavel);
 
+  const resumo = montarResumo(itens);
+
+  /* Documento de audiência única. A condição é a contagem final de audiências
+     efetivamente incluídas no arquivo — nunca o texto digitado na busca, que
+     pode encontrar uma audiência e vários prazos ao mesmo tempo. */
+  const exportacaoIndividual = resumo.audiencias === 1;
+
+  /* Sem cabeçalho de dia à vista (agrupamento por responsável, cidade ou
+     cliente) a data do compromisso não apareceria em lugar nenhum do card. */
+  if (exportacaoIndividual) {
+    for (const item of itens) item.mostrarData = true;
+  }
+
   const grupos = agrupar(itens, cfg.agrupamento).map((g) => ({
     ...g,
     resumo: resumirGrupo(g.itens),
@@ -116,7 +133,10 @@ export function montarDocumento(registros, periodo, config) {
     config: cfg,
     itens,
     grupos,
-    resumo: montarResumo(itens),
+    resumo,
+    exportacaoIndividual,
+    tituloObservacoes: TITULO_OBSERVACOES,
+    observacoes: exportacaoIndividual ? [...OBSERVACOES_IMPORTANTES] : [],
   };
 }
 
