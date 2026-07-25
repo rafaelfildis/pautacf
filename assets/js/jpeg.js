@@ -679,8 +679,10 @@ export async function gerarJPEG(doc, opcoes = {}) {
 
   const elementos = montarElementos(medidor, doc, P, ehA4, largura);
 
-  // O resumo executivo do A4 só ocupa espaço na primeira parte.
-  const alturaResumo = ehA4 ? ALTURA_RESUMO + 20 : 0;
+  /* O resumo executivo do A4 só ocupa espaço na primeira parte, e no documento
+     de audiência única não entra: contar "1 audiência" é repetir o documento. */
+  const comResumo = ehA4 && !doc.exportacaoIndividual;
+  const alturaResumo = comResumo ? ALTURA_RESUMO + 20 : 0;
   const base = P.alturaMax - P.alturaCab - P.alturaRodape - P.margem * 2;
   const partes = repartir(elementos, base - alturaResumo, base);
 
@@ -709,7 +711,7 @@ export async function gerarJPEG(doc, opcoes = {}) {
 
     let y = P.alturaCab + P.margem;
 
-    if (ehA4 && p === 0) {
+    if (comResumo && p === 0) {
       y += desenharResumo(ctx, doc, P.margem, y, largura) + 20;
     }
 

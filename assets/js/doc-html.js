@@ -94,7 +94,14 @@ function cabecalho(doc, logo) {
 </header>`;
 }
 
+/**
+ * Resumo executivo.
+ * No documento de audiência única os contadores não informam nada — "1
+ * audiência, 0 prazos, 1 comarca" é só repetir o que o próprio documento já é.
+ */
 function resumoExecutivo(doc) {
+  if (doc.exportacaoIndividual) return '';
+
   const r = doc.resumo;
   const cards = [
     ['Audiências', r.audiencias, false],

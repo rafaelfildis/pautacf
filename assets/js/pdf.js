@@ -667,8 +667,10 @@ export async function gerarPDF(doc, modo, opcoes = {}) {
 
   const elementos = montarElementos(pdf, doc, modo, largura);
 
-  // O resumo executivo ocupa espaço apenas na primeira página.
-  const alturaResumo = medirResumo(modo === 'mobile' ? 3 : 6) + 4;
+  /* O resumo executivo ocupa espaço apenas na primeira página, e no documento de
+     audiência única não entra: contar "1 audiência" é repetir o documento. */
+  const comResumo = !doc.exportacaoIndividual;
+  const alturaResumo = comResumo ? medirResumo(modo === 'mobile' ? 3 : 6) + 4 : 0;
   const utilPrimeira = alturaPagina - alturaCab - alturaResumo - alturaRodape - margem;
   const utilDemais = alturaPagina - alturaCab - alturaRodape - margem;
 
@@ -681,7 +683,7 @@ export async function gerarPDF(doc, modo, opcoes = {}) {
     cabecalhoInstitucional(pdf, doc, logo, larguraPagina, margem, tipo);
     let y = alturaCab + 4;
 
-    if (indice === 0) {
+    if (comResumo && indice === 0) {
       y += desenharResumo(pdf, doc, margem, y, largura, tipo) + 4;
     }
 

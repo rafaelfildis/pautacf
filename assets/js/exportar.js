@@ -183,10 +183,13 @@ function montarTexto(doc) {
     return L.join('\n');
   }
 
-  const r = doc.resumo;
-  L.push(`${r.total} registros · ${r.audiencias} audiências · ${r.prazos + r.tarefas} prazos/tarefas`);
-  if (r.semResponsavel) L.push(`${r.semResponsavel} sem responsável definido`);
-  L.push('');
+  // Mesma regra dos demais formatos: contar "1 audiência" é repetir o documento.
+  if (!doc.exportacaoIndividual) {
+    const r = doc.resumo;
+    L.push(`${r.total} registros · ${r.audiencias} audiências · ${r.prazos + r.tarefas} prazos/tarefas`);
+    if (r.semResponsavel) L.push(`${r.semResponsavel} sem responsável definido`);
+    L.push('');
+  }
 
   for (const grupo of doc.grupos) {
     L.push(`${grupo.rotulo}${grupo.subtitulo ? ` — ${grupo.subtitulo}` : ''}`);
