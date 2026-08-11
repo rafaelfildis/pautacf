@@ -6,11 +6,52 @@
 <title>PAUTA DE AUDIÊNCIAS CALMON E FREITAS ADVOGADOS</title>
 <meta name="description" content="Acompanhamento e extração da pauta de audiências e prazos do escritório Calmon e Freitas Advogados.">
 <meta name="theme-color" content="#07162e">
+<script>
+  // Evita o "flash" do painel antes da verificação de login: se já houver uma
+  // sessão válida neste navegador, a marca é aplicada antes da primeira pintura.
+  try {
+    if (sessionStorage.getItem('pautacf.sessao.v1') === '1') {
+      document.documentElement.classList.add('autenticado');
+    }
+  } catch (erro) { /* sessionStorage indisponível (modo privado restrito etc.) */ }
+</script>
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="assets/img/favicon.png">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
+
+<!-- ---------- Tela de login ---------- -->
+<div class="tela-login" id="telaLogin">
+  <div class="tela-login__cartao">
+    <img class="tela-login__logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
+    <h1 class="tela-login__titulo">Acesso restrito</h1>
+    <p class="tela-login__subtitulo">Informe suas credenciais para acessar a pauta de audiências.</p>
+
+    <form id="formLogin" class="tela-login__form" autocomplete="on">
+      <label class="bloco">
+        <span class="bloco__titulo">Login</span>
+        <input type="text" id="loginUsuario" name="username" autocomplete="username"
+               placeholder="usuario@escritorio.com.br" required>
+      </label>
+
+      <label class="bloco">
+        <span class="bloco__titulo">Senha de acesso</span>
+        <input type="password" id="loginSenha" name="password" autocomplete="current-password"
+               placeholder="••••••••" required>
+      </label>
+
+      <p class="tela-login__erro" id="loginErro" role="alert" hidden>Login ou senha incorretos.</p>
+
+      <button class="btn btn--ouro tela-login__entrar" type="submit">Entrar</button>
+    </form>
+
+    <p class="tela-login__rodape">Calmon e Freitas Advogados — acesso restrito à equipe.</p>
+  </div>
+</div>
+
+<!-- ---------- Aplicação ---------- -->
+<div id="appConteudo">
 
 <header class="topo">
   <div class="topo__marca">
@@ -32,6 +73,9 @@
     </button>
     <button class="btn btn--ouro" id="btnSincronizar" type="button">
       <span aria-hidden="true">⟳</span> Sincronizar
+    </button>
+    <button class="btn btn--fantasma" id="btnSair" type="button" title="Encerrar sessão">
+      <span aria-hidden="true">⏻</span> Sair
     </button>
   </div>
 </header>
@@ -360,6 +404,9 @@
 
 <div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
 
+</div> <!-- /#appConteudo -->
+
+<script type="module" src="assets/js/auth.js"></script>
 <script type="module" src="assets/js/app.js"></script>
 </body>
 </html>
