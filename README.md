@@ -60,6 +60,12 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 - **Pré-visualização** que respeita a plataforma escolhida: moldura de aparelho no
   MOBILE (360, 390 e 430 px) e folha reduzida proporcionalmente no A4.
 - **Funciona offline** com a última cópia sincronizada.
+- **Tela de login** antes do painel principal, com login e senha únicos para o
+  escritório. É uma camada de interface, não de segurança real — o site é
+  estático, sem back-end, e a credencial fica no código-fonte (`assets/js/auth.js`).
+  Ela impede o acesso casual à tela, mas não substitui controle de acesso de
+  verdade para dados sensíveis. A sessão dura até o navegador (ou a aba) ser
+  fechado; o botão **Sair**, no cabeçalho, encerra a sessão manualmente antes disso.
 
 Nenhuma saída é captura da tela: todos os documentos são construídos a partir dos dados.
 
@@ -75,17 +81,17 @@ Depois acesse `http://localhost:8000`.
 
 ### Publicação
 
-Em **Settings → Pages**, selecione a branch `main` e a pasta `/ (root)`.
-O painel fica disponível em `https://rafaelfildis.github.io/pautacf/`.
+Em Settings → Pages, selecione a branch `main` e a pasta `/ (root)`. O painel fica
+disponível em `https://rafaelfildis.github.io/pautacf/`.
 
 ### Configuração
 
-Abra **Configurações** no cabeçalho para ajustar:
+Abra Configurações no cabeçalho para ajustar:
 
-- **Link da agenda** — o endereço `webcal://` do Astrea (a conversão para `https://`
-  é automática).
-- **Equipe** — a lista de advogados que aparece no seletor de responsável.
-- **Backup** — as atribuições ficam salvas apenas no navegador (`localStorage`), não são
+- Link da agenda — o endereço `webcal://` do Astrea (a conversão para `https://` é
+  automática).
+- Equipe — a lista de advogados que aparece no seletor de responsável.
+- Backup — as atribuições ficam salvas apenas no navegador (`localStorage`), não são
   enviadas ao Astrea nem a nenhum servidor. Use o backup para levá-las a outro
   computador ou antes de limpar os dados de navegação.
 
@@ -96,6 +102,7 @@ index.html                interface
 assets/css/styles.css     identidade visual da tela
 assets/css/documento.css  estilo dos documentos exportados (prévia e impressão)
 assets/img/logo.png       logomarca oficial
+assets/js/auth.js         tela de login (camada de interface, credencial fixa)
 assets/js/ics.js          parser do calendário iCalendar do Astrea
 assets/js/store.js        persistência local (responsáveis, modalidade, equipe)
 assets/js/formato.js      constantes da marca, formatação, máscaras, agrupamento
@@ -107,83 +114,82 @@ assets/js/exportar.js     filtros de formato/plataforma, prévia, impressão e d
 assets/js/app.js          controlador: filtros, tabela e sincronização
 ```
 
-O fluxo é sempre o mesmo: a tela entrega os registros filtrados, `documento.js`
-monta um modelo único (grupos, resumo, privacidade aplicada, bloco de observações) e
-cada renderizador consome esse modelo. Nenhum formato depende do layout da tela.
+O fluxo é sempre o mesmo: a tela entrega os registros filtrados, `documento.js` monta
+um modelo único (grupos, resumo, privacidade aplicada, bloco de observações) e cada
+renderizador consome esse modelo. Nenhum formato depende do layout da tela.
 
 Toda a exportação passa por um único ponto, `exportarPauta()` em `exportar.js`, que
-recebe o formato, a plataforma e o destino (arquivo, prévia, impressão ou texto).
-Barra da tela, modal e prévia são apenas maneiras diferentes de chamá-lo, o que impede
-que *Prévia* e *Exportar* discordem entre si.
+recebe o formato, a plataforma e o destino (arquivo, prévia, impressão ou texto). Barra
+da tela, modal e prévia são apenas maneiras diferentes de chamá-lo, o que impede que
+Prévia e Exportar discordem entre si.
 
 ### Notas técnicas
 
-- **Sem dependências obrigatórias.** A única biblioteca externa é o
-  [jsPDF](https://github.com/parallax/jsPDF), carregado sob demanda apenas na exportação
-  em PDF. Sem internet, o sistema recorre à impressão do navegador.
-- **Fuso horário.** O Astrea entrega os horários em `America/Sao_Paulo`; o painel os
+- Sem dependências obrigatórias. A única biblioteca externa é o
+  [jsPDF](https://github.com/parallax/jsPDF), carregado sob demanda apenas na
+  exportação em PDF. Sem internet, o sistema recorre à impressão do navegador.
+- Fuso horário. O Astrea entrega os horários em `America/Sao_Paulo`; o painel os
   interpreta como horário de parede, evitando o deslocamento de horas que aparecia em
   extrações anteriores.
-- **Semana forense.** A semana vai de segunda a domingo.
-- **Prazos longos.** Alguns prazos trazem o despacho inteiro no título; nas exportações
+- Semana forense. A semana vai de segunda a domingo.
+- Prazos longos. Alguns prazos trazem o despacho inteiro no título; nas exportações
   cada célula é limitada a 5 linhas para não estourar a página.
 
 ### Decisões de layout dos documentos
 
-- **PDF com texto nativo.** A exportação anterior desenhava a pauta num canvas e
-  embutia a imagem: nada era selecionável nem pesquisável. Agora o texto é texto,
-  os links são anotações reais e a nitidez independe do zoom.
-- **Página do PDF MOBILE: 110 × 260 mm.** Num celular a folha ocupa a largura da tela,
+- PDF com texto nativo. A exportação anterior desenhava a pauta num canvas e embutia a
+  imagem: nada era selecionável nem pesquisável. Agora o texto é texto, os links são
+  anotações reais e a nitidez independe do zoom.
+- Página do PDF MOBILE: 110 × 260 mm. Num celular a folha ocupa a largura da tela,
   então uma página estreita faz o mesmo corpo de 11 pt aparecer maior — é o que
   dispensa o zoom. Mantidos os mínimos de 11 pt no corpo e 12 pt nos botões, um card
-  ocupa cerca de 94 mm, o que resulta em **2 cards por página**, não nos 3 a 5
-  sugeridos. Cabem 3 apenas reduzindo a fonte ou cortando campos; como as próprias
-  regras pedem para não forçar a densidade nem diminuir a tipografia, a legibilidade
-  prevaleceu. Quem preferir papel comum tem a opção *A4 retrato* no modal.
-- **JPEG dividido em partes.** No MOBILE cada parte tem 1080 px de largura e no máximo
+  ocupa cerca de 94 mm, o que resulta em 2 cards por página, não nos 3 a 5 sugeridos.
+  Cabem 3 apenas reduzindo a fonte ou cortando campos; como as próprias regras pedem
+  para não forçar a densidade nem diminuir a tipografia, a legibilidade prevaleceu.
+  Quem preferir papel comum tem a opção A4 retrato no modal.
+- JPEG dividido em partes. No MOBILE cada parte tem 1080 px de largura e no máximo
   4000 px de altura. No A4 são 2400 × 1700 px, a proporção da folha em paisagem, com a
   mesma tabela do PDF. A quebra respeita os limites de card ou de linha e nunca deixa
   cabeçalho de dia órfão.
-- **Etiqueta de modalidade sem ícone na tabela A4.** A coluna é estreita e o emoji,
-  largo: com ele, "PRESENCIAL" invadiria a coluna vizinha. Rótulos longos ainda
-  reduzem a fonte em vez de vazar.
-- **CPF e CNPJ mascarados por padrão** na plataforma MOBILE, que é a que circula por
+- Etiqueta de modalidade sem ícone na tabela A4. A coluna é estreita e o emoji, largo:
+  com ele, "PRESENCIAL" invadiria a coluna vizinha. Rótulos longos ainda reduzem a
+  fonte em vez de vazar.
+- CPF e CNPJ mascarados por padrão na plataforma MOBILE, que é a que circula por
   celular. O modal permite exibir ou ocultar.
-- **O documento A4 é diagramado em 1180 px fixos.** A folha de estilo dos documentos é
+- O documento A4 é diagramado em 1180 px fixos. A folha de estilo dos documentos é
   mobile first e dimensiona a tipografia em `vw`; num celular isso devolveria um layout
   de celular mesmo com A4 selecionado. A classe `.doc--fixo` volta os tamanhos para
   valores fixos e neutraliza os breakpoints, e a prévia reduz a folha inteira em vez de
   cortá-la.
-- **Nome do arquivo da audiência única** identifica o cliente e a data da própria
+- Nome do arquivo da audiência única identifica o cliente e a data da própria
   audiência, não o intervalo do filtro, e é truncado para não estourar o limite de
   caminho do Windows quando o feed não separa as partes.
 
 ### O que o feed do Astrea não exporta
 
-A tela de evento do Astrea tem os campos **"Endereço ou local"**, **"Modalidade"** e
-**"Responsável"**, mas **nenhum deles vai para o `.ics`**. O feed traz apenas
-`SUMMARY`, `DESCRIPTION`, `DTSTART`, `DTEND`, `ORGANIZER`, `ATTENDEE` e `UID` — não
-existe uma única propriedade `LOCATION` no arquivo inteiro.
+A tela de evento do Astrea tem os campos "Endereço ou local", "Modalidade" e
+"Responsável", mas nenhum deles vai para o `.ics`. O feed traz apenas `SUMMARY`,
+`DESCRIPTION`, `DTSTART`, `DTEND`, `ORGANIZER`, `ATTENDEE` e `UID` — não existe uma
+única propriedade `LOCATION` no arquivo inteiro.
 
 Consequências práticas:
 
-- **Modalidade** é preenchida no painel, com *Virtual* como padrão.
-- **Link da audiência** é extraído por busca de URL na descrição — o que só funciona
-  quando alguém digitou o link nas *observações* do evento, já que essas vão para a
+- Modalidade é preenchida no painel, com Virtual como padrão.
+- Link da audiência é extraído por busca de URL na descrição — o que só funciona
+  quando alguém digitou o link nas observações do evento, já que essas vão para a
   `DESCRIPTION`. Na agenda atual isso cobre 9 das 50 audiências; as demais são
   preenchidas à mão no painel e ficam salvas.
-- Como cada secretaria escreve de um jeito ("Link da reunião:", "Acessando este link:",
-  "Endereço:", ou a URL solta), a extração procura a URL em si e ignora o rótulo.
+- Como cada secretaria escreve de um jeito ("Link da reunião:", "Acessando este
+  link:", "Endereço:", ou a URL solta), a extração procura a URL em si e ignora o
+  rótulo.
 
-Levar o "Endereço ou local" para o painel automaticamente exigiria a API autenticada do
-Astrea, não o feed público de calendário.
-
----
+Levar o "Endereço ou local" para o painel automaticamente exigiria a API autenticada
+do Astrea, não o feed público de calendário.
 
 ## Automação em Python (CLI)
 
-Além do painel, o repositório mantém a automação que gera a planilha semanal no modelo
-do escritório, envia por e-mail e monta o link do WhatsApp.
+Além do painel, o repositório mantém a automação que gera a planilha semanal no
+modelo do escritório, envia por e-mail e monta o link do WhatsApp.
 
 ### Instalação
 
@@ -245,10 +251,18 @@ data/exemplos/           calendário sintético para testes
 tests/
 ```
 
----
-
-## Histórico
+### Histórico
 
 O painel anterior (`webapp/`, baseado em importação de planilha Excel) foi substituído
 pelo painel na raiz, que lê a agenda direto do Astrea. Ele continua disponível no
 histórico do Git.
+
+---
+
+## Lembrete de segurança
+
+Essa tela de login é uma camada de interface, não uma proteção real: o site é
+estático (sem back-end), então a senha fica visível a quem inspecionar o
+código-fonte da página publicada. Ela impede o acesso casual de quem não
+conhece a URL/credencial, mas não substitui um controle de acesso de verdade
+para dados sensíveis de clientes.
