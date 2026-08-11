@@ -299,6 +299,8 @@ input[type="search"],
 input[type="text"],
 input[type="url"],
 input[type="date"],
+input[type="email"],
+input[type="password"],
 select,
 textarea {
   background: rgba(7, 16, 34, 0.62);
@@ -810,6 +812,99 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
 
 .aviso--erro { border-color: var(--erro); color: #f3b3a9; }
 
+/* ================= Tela de login ================= */
+
+/* Sem sessão válida: mostra a tela de login e esconde o painel.
+   Com sessão válida (classe aplicada em <html> por auth.js): o inverso. */
+html:not(.autenticado) #appConteudo { display: none; }
+html.autenticado .tela-login { display: none; }
+
+.tela-login {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #12264a 0%, transparent 60%),
+    var(--marinho-900);
+}
+
+.tela-login__cartao {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 36px 32px 30px;
+  background: linear-gradient(180deg, rgba(20, 43, 78, 0.65), rgba(10, 23, 48, 0.85));
+  border: 1px solid rgba(201, 169, 97, 0.25);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.tela-login__logo {
+  height: 56px;
+  width: auto;
+  margin-bottom: 14px;
+}
+
+.tela-login__titulo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ouro-400);
+}
+
+.tela-login__subtitulo {
+  margin: 6px 0 22px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--prata-400);
+}
+
+.tela-login__form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tela-login__form input {
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.tela-login__erro {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  color: #f3b3a9;
+  text-align: center;
+}
+
+.tela-login__entrar {
+  width: 100%;
+  justify-content: center;
+  padding: 11px 16px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.tela-login__rodape {
+  margin: 26px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--prata-400);
+  text-align: center;
+}
+
 /* ================= Responsivo ================= */
 
 @media (max-width: 900px) {
@@ -836,7 +931,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.75); cu
 
 @media print {
   body { background: #fff; color: #111; }
-  .topo__acoes, .filtros, .exportar, .indicadores, .modal, .aviso { display: none !important; }
+  .topo__acoes, .filtros, .exportar, .indicadores, .modal, .aviso, .tela-login { display: none !important; }
   .painel { box-shadow: none; border: 0; background: none; }
   .topo { position: static; background: none; border-bottom: 2px solid var(--ouro-600); }
   .topo__texto h1, .topo__texto p { color: #0d1b34; }
