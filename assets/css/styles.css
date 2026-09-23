@@ -146,6 +146,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   letter-spacing: 0.02em;
   transition: background var(--transicao), border-color var(--transicao), transform var(--transicao);
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .btn:active { transform: translateY(1px); }

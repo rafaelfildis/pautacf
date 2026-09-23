@@ -112,6 +112,7 @@ assets/js/pdf.js          PDF com texto nativo — A4 e MOBILE
 assets/js/jpeg.js         JPEG — tabela em A4 e cards em MOBILE
 assets/js/exportar.js     filtros de formato/plataforma, prévia, impressão e downloads
 assets/js/app.js          controlador: filtros, tabela e sincronização
+mapa/                     módulo MAPA DE PROCESSOS (ver seção própria)
 ```
 
 O fluxo é sempre o mesmo: a tela entrega os registros filtrados, `documento.js` monta
@@ -185,6 +186,58 @@ Consequências práticas:
 
 Levar o "Endereço ou local" para o painel automaticamente exigiria a API autenticada
 do Astrea, não o feed público de calendário.
+
+## Mapa de Processos
+
+Segundo módulo do sistema, em `mapa/`, alcançado pelo botão **Mapa de Processos** no
+cabeçalho da pauta. Mostra a distribuição geográfica da carteira: mapa do Brasil por
+estado e consulta filtrável por comarca, vara, parte contrária e situação.
+
+Publicado junto com a pauta, em `https://rafaelfildis.github.io/pautacf/mapa/`.
+
+### Origem dos dados
+
+Diferente da pauta, que lê o feed do Astrea a cada carregamento, este módulo lê um
+arquivo estático versionado no repositório — a carteira muda em ritmo de semanas, não
+de horas. A base vem da planilha exportada do sistema (`Processo.xlsx`), que **não é
+versionada** (`*.xlsx` está no `.gitignore`); o que entra no repositório é o resultado
+do processamento.
+
+Para atualizar: coloque a planilha nova em `mapa/fonte/Processo.xlsx` e rode
+
+```bash
+pip install openpyxl
+python3 mapa/build/gerar_dados.py mapa/fonte/Processo.xlsx
+```
+
+O script regrava `mapa/data/processos.json`. Não há passo de compilação — a página lê
+o arquivo novo no carregamento seguinte.
+
+### Estrutura
+
+```
+mapa/index.html                       painel (lê data/ por fetch)
+mapa/data/processos.json              base normalizada — é o que o painel consome
+mapa/data/br-uf.json                  geometria do mapa (paths SVG das 27 UFs)
+mapa/data/processos.csv               mesma base em CSV, para Excel ou BI
+mapa/data/agregado_uf.csv             contagem por estado
+mapa/data/agregado_comarca.csv        contagem por comarca
+mapa/build/gerar_dados.py             regera processos.json a partir do .xlsx
+mapa/build/gerar_mapa.py              regera br-uf.json a partir de um GeoJSON
+mapa/standalone/                      versão de arquivo único, com os dados embutidos
+mapa/README.md                        dicionário de dados e regras de derivação
+```
+
+### Integração com a pauta
+
+O módulo compartilha a marca de sessão da pauta (`pautacf.sessao.v1`): quem abre
+`mapa/` sem ter passado pela tela de acesso é devolvido a ela. Vale a ressalva do
+**Lembrete de segurança** abaixo, com um agravante — a guarda protege a página, e não
+os arquivos de `mapa/data/`, que o host serve diretamente a quem souber o caminho.
+
+A folha de estilo do painel é própria e independente da pauta: o documento é de
+leitura em tela, com fundo claro e mapa colorido por faixa, e não segue a identidade
+escura dos documentos exportados.
 
 ## Automação em Python (CLI)
 
@@ -266,3 +319,11 @@ estático (sem back-end), então a senha fica visível a quem inspecionar o
 código-fonte da página publicada. Ela impede o acesso casual de quem não
 conhece a URL/credencial, mas não substitui um controle de acesso de verdade
 para dados sensíveis de clientes.
+
+O mesmo vale, com mais razão, para `mapa/data/`: são arquivos servidos pelo host, sem
+passar pela tela de acesso. Quem tiver o endereço do arquivo lê a base inteira. Como o
+repositório é público, a base da carteira — nomes de clientes, números de processo,
+partes contrárias e links dos autos — é pública junto com ele, e permanece no histórico
+do repositório mesmo depois de removida. Um controle de acesso real exige servir o
+sistema por trás de autenticação (hospedagem com proteção de acesso), não por página
+estática.
