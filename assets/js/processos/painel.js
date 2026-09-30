@@ -438,7 +438,8 @@ function colunasProcessos() {
   const local = estado.base.origemBase === 'local';
   return [
     ['distribuicao', local ? 'Distribuição' : 'Distribuição (mês)'],
-    ...(local ? [['cliente', 'Cliente'], ['numero', 'Processo']] : []),
+    ['numero', 'Processo'],
+    ...(local ? [['cliente', 'Cliente']] : []),
     ['uf', 'UF'],
     ['municipio', 'Comarca'],
     ['unidade', 'Unidade'],
@@ -515,7 +516,7 @@ function renderizarProcessos(recorte) {
   }
 
   $('#processosSub').textContent = `${fmtInt.format(recorte.length)} processo${recorte.length === 1 ? '' : 's'}`
-    + (estado.base.origemBase === 'local' ? ' · base local, com cliente e número' : ' · base publicada, anonimizada');
+    + (estado.base.origemBase === 'local' ? ' · base local, com cliente e número' : ' · base publicada, sem nome de cliente');
 
   const nav = $('#paginacao');
   nav.replaceChildren();
@@ -622,11 +623,13 @@ function descreverBase() {
   const ref = b.referencia ? ` · ${fmtData(b.referencia)}` : '';
   $('#baseTexto').textContent = `${b.origemBase === 'local' ? 'Base local' : 'Base publicada'} · ${fmtInt.format(b.registros.length)} processos${ref}`;
   $('#base').title = b.referencia ? `Último andamento registrado na base: ${fmtData(b.referencia)}` : '';
-  $('#campoBusca').hidden = b.origemBase !== 'local';
+  $('#busca').placeholder = b.origemBase === 'local'
+    ? 'Buscar cliente, processo, comarca…'
+    : 'Buscar nº do processo, comarca, parte adversa…';
   $('#blocoBaseLocal').hidden = !lerBaseLocal();
   $('#baseAtual').textContent = b.origemBase === 'local'
     ? `Em uso: base local importada de “${b.fonte}” em ${fmtData(b.geradoEm)}, com ${fmtInt.format(b.registros.length)} processos (inclui cliente e número do processo).`
-    : `Em uso: base publicada, anonimizada, gerada em ${fmtData(b.geradoEm)} com ${fmtInt.format(b.registros.length)} processos.`;
+    : `Em uso: base publicada (com número do processo, sem nome de cliente), gerada em ${fmtData(b.geradoEm)} com ${fmtInt.format(b.registros.length)} processos.`;
 }
 
 function usarBase(base) {

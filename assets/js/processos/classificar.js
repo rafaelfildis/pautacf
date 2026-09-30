@@ -638,8 +638,8 @@ function responsavelCurto(texto) {
 
 /**
  * Converte uma linha da exportação do Astrea no registro do painel.
- * Campos pessoais (cliente, número) só existem na base local importada;
- * `anonimizar()` os remove antes de publicar.
+ * O nome do cliente só existe na base local importada; `paraPublicacao()`
+ * o remove antes de publicar.
  */
 export function classificarLinha(linha, indice, origens) {
   const local = resolverLocal(linha, indice, origens);
@@ -719,14 +719,15 @@ export function origensAprendidas(registros) {
 }
 
 /**
- * Remove tudo o que identifica cliente ou processo (base publicada no site):
- * nome, número, código de origem, valor da causa e datas exatas. A parte
+ * Registro como vai para a base publicada no site. O número do processo é
+ * publicado por decisão do escritório, para consulta na tabela; saem o nome do
+ * cliente, o código de origem, o valor da causa e as datas exatas. A parte
  * adversa só é mantida quando é empresa — pessoa física vira "Pessoa física" —
  * e a distribuição fica reduzida ao mês.
  */
-export function anonimizar(registro) {
+export function paraPublicacao(registro) {
   const {
-    numero, cliente, origem, valorCausa, ultimoAndamento, adversaEmpresa, distribuicao, ...resto
+    cliente, origem, valorCausa, ultimoAndamento, adversaEmpresa, distribuicao, ...resto
   } = registro;
   return {
     ...resto,

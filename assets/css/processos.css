@@ -307,6 +307,7 @@
 .selo-resultado--improcedente, .selo-resultado--sem_merito { color: var(--prata-100); }
 
 .tabela--processos td { font-size: 13px; }
+.tabela--processos td.col-processo { white-space: nowrap; font-variant-numeric: tabular-nums; user-select: all; }
 .tabela--processos td.vazio { text-align: center; padding: 26px; }
 
 .mais-linhas { display: flex; justify-content: center; }

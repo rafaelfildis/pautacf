@@ -3,10 +3,10 @@
  *   node scripts/processos/gerar_base.mjs <Processos.xlsx> [--json-bruto <saida.json>]
  *
  * Usa exatamente o mesmo classificador da importação feita no navegador
- * (assets/js/processos/classificar.js) e grava assets/data/processos-base.json
- * SEM dados pessoais: nem nome de cliente, nem CPF, nem número de processo,
- * nem texto de andamento. O repositório é público — só vai para ele o que o
- * painel precisa para mapear volume e resultado por localidade.
+ * (assets/js/processos/classificar.js) e grava assets/data/processos-base.json.
+ * O repositório é público: vai para ele o número do processo (publicado por
+ * decisão do escritório), mas nunca nome de cliente, CPF, texto de andamento,
+ * valor da causa ou data exata.
  *
  * Também atualiza assets/data/origens-cnj.json, o dicionário público de
  * unidades de origem (J.TR.OOOO → município), aprendido dos processos em que a
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 import { lerXlsx, lerCsv } from '../../assets/js/processos/xlsx.js';
 import {
-  classificarPlanilha, criarIndiceMunicipios, anonimizar, origensAprendidas,
+  classificarPlanilha, criarIndiceMunicipios, paraPublicacao, origensAprendidas,
 } from '../../assets/js/processos/classificar.js';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -59,9 +59,9 @@ const base = {
   versao: 1,
   geradoEm: new Date().toISOString().slice(0, 10),
   referencia: datas.at(-1) || null,
-  fonte: 'Exportação de processos do Astrea — base anonimizada',
+  fonte: 'Exportação de processos do Astrea — sem nome de cliente',
   total: registros.length,
-  registros: registros.map(anonimizar),
+  registros: registros.map(paraPublicacao),
 };
 writeFileSync(resolve(DADOS, 'processos-base.json'), `${JSON.stringify(base)}\n`);
 

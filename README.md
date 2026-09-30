@@ -9,7 +9,9 @@ pauta em **PDF**, **JPEG** e **texto**.
 
 > ⚠️ Nenhum dado real de cliente deve ser commitado neste repositório. Arquivos `.ics`,
 > `.xlsx` e pautas geradas são ignorados pelo Git (veja `.gitignore`) — apenas os
-> exemplos sintéticos em `data/exemplos/` são versionados.
+> exemplos sintéticos em `data/exemplos/` são versionados. Única exceção, por decisão do
+> escritório: o número do processo na base do Painel de processos
+> (`assets/data/processos-base.json`), sem nome de cliente.
 
 ---
 
@@ -218,15 +220,17 @@ pelo botão **Painel de processos**, no canto superior direito da pauta, e publi
 
 A base vem da **exportação de processos do Astrea** (planilha `Processos`, .xlsx).
 
-- **Base publicada** — `assets/data/processos-base.json`, gerada pelo script abaixo e
-  **anonimizada**: sem nome de cliente, CPF, número de processo, texto de andamento,
-  valor da causa ou data exata (a distribuição fica reduzida ao mês); parte adversa
-  pessoa física vira "Pessoa física". O repositório é público, e o painel só precisa de
-  localidade, tese, parte adversa empresarial e resultado.
+- **Base publicada** — `assets/data/processos-base.json`, gerada pelo script abaixo.
+  Traz o **número do processo** — publicado por decisão do escritório, para consulta
+  na tabela — mas nunca nome de cliente, CPF, texto de andamento, valor da causa ou
+  data exata (a distribuição fica reduzida ao mês); parte adversa pessoa física vira
+  "Pessoa física". Atenção: o repositório e o site são públicos e a tela de login é só
+  visual, então esses números ficam acessíveis a qualquer pessoa, inclusive no
+  histórico do Git.
 - **Base local** — o botão **Atualizar base** lê a planilha do Astrea direto no
-  navegador (nada é enviado a servidor) e guarda a base completa, com cliente e número
-  do processo, apenas naquele computador. Com ela o painel ganha busca por cliente e
-  as colunas de cliente e número na tabela. O mesmo modal volta à base publicada ou
+  navegador (nada é enviado a servidor) e guarda a base completa, com o nome do
+  cliente, apenas naquele computador. Com ela a tabela ganha a coluna de cliente e a
+  busca passa a achar clientes pelo nome. O mesmo modal volta à base publicada ou
   apaga a local.
 
 Para atualizar a base publicada:
@@ -299,7 +303,7 @@ assets/js/processos/dados.js      base, filtros, agregação, índice e recomend
 assets/js/processos/mapa.js       mapa SVG (coroplético por UF + bolhas por comarca)
 assets/js/processos/graficos.js   barras, matriz tese × UF e colunas mensais
 assets/js/processos/painel.js     controlador da página
-assets/data/processos-base.json   base publicada, anonimizada
+assets/data/processos-base.json   base publicada (número do processo, sem nome de cliente)
 assets/data/origens-cnj.json      J.TR.OOOO → município (dado público)
 assets/data/brasil-uf.json        contornos das UFs já projetados
 assets/data/municipios.json       5.570 municípios do IBGE com coordenadas
