@@ -60,6 +60,9 @@ Aplicação estática na raiz do repositório — sem instalação, build ou ban
 - **Pré-visualização** que respeita a plataforma escolhida: moldura de aparelho no
   MOBILE (360, 390 e 430 px) e folha reduzida proporcionalmente no A4.
 - **Funciona offline** com a última cópia sincronizada.
+- **Painel de processos** — botão no canto superior direito que abre o mapa dos
+  processos por UF e comarca, com resultados e prioridade para tráfego pago (seção
+  própria abaixo).
 - **Tela de login** antes do painel principal, com login e senha únicos para o
   escritório. É uma camada de interface, não de segurança real — o site é
   estático, sem back-end, e a credencial fica no código-fonte (`assets/js/auth.js`).
@@ -185,6 +188,127 @@ Consequências práticas:
 
 Levar o "Endereço ou local" para o painel automaticamente exigiria a API autenticada
 do Astrea, não o feed público de calendário.
+
+## Painel de processos (`processos.html`)
+
+Aba de inteligência para a estratégia de **tráfego pago**: mostra onde estão os processos
+do escritório, onde eles têm sido procedentes e quais cidades merecem verba. Acessível
+pelo botão **Painel de processos**, no canto superior direito da pauta, e publicada em
+`https://rafaelfildis.github.io/pautacf/processos.html`. Usa a mesma tela de login.
+
+### O que o painel mostra
+
+- **Mapa do Brasil** com as UFs coloridas por volume, êxito ajustado ou recomendação de
+  tráfego, e uma bolha por comarca (área proporcional ao número de processos). Clicar
+  numa UF aproxima o mapa e filtra o painel; clicar numa bolha filtra a comarca.
+- **Onde investir em tráfego**: as oito comarcas (ou UFs) de maior índice de
+  prioridade, com a recomendação — Escalar, Testar, Observar ou Cautela.
+- **Ranking de localidades** por comarca ou por UF, ordenável, com decisões de mérito,
+  procedentes, parciais, acordos, improcedentes, liminares, êxito bruto e ajustado.
+  Exporta CSV e **copia as cidades recomendadas** no formato `Cidade, UF`, pronto para
+  colar na segmentação por local do gerenciador de anúncios.
+- **Gráficos**: resultados conhecidos por UF, matriz tese × UF, distribuições por mês
+  (ritmo de captação) e volume por parte adversa.
+- **Tabela de processos** do recorte, paginada e exportável.
+- **Filtros** que escopam tudo: demandas de massa (consumidor, bancário e
+  previdenciário, sem pro bono) ou todos os processos, UF, comarca, parte adversa, tese,
+  resultado, período de distribuição e responsável.
+
+### Base de dados
+
+A base vem da **exportação de processos do Astrea** (planilha `Processos`, .xlsx).
+
+- **Base publicada** — `assets/data/processos-base.json`, gerada pelo script abaixo e
+  **anonimizada**: sem nome de cliente, CPF, número de processo, texto de andamento,
+  valor da causa ou data exata (a distribuição fica reduzida ao mês); parte adversa
+  pessoa física vira "Pessoa física". O repositório é público, e o painel só precisa de
+  localidade, tese, parte adversa empresarial e resultado.
+- **Base local** — o botão **Atualizar base** lê a planilha do Astrea direto no
+  navegador (nada é enviado a servidor) e guarda a base completa, com cliente e número
+  do processo, apenas naquele computador. Com ela o painel ganha busca por cliente e
+  as colunas de cliente e número na tabela. O mesmo modal volta à base publicada ou
+  apaga a local.
+
+Para atualizar a base publicada:
+
+```bash
+node scripts/processos/gerar_base.mjs caminho/para/Processos.xlsx
+```
+
+O script usa o mesmo classificador da importação no navegador
+(`assets/js/processos/classificar.js`) e também atualiza `assets/data/origens-cnj.json`,
+o dicionário público de unidades de origem (J.TR.OOOO → município) aprendido dos
+processos cuja comarca veio por extenso. Não versione a planilha: `*.xlsx` continua no
+`.gitignore`.
+
+### Como a planilha é interpretada
+
+O Astrea não preenche "Decisão do processo" nem "Resultado do processo" na exportação.
+O classificador reconstrói cada campo:
+
+- **UF** pelo número CNJ (segmento J.TR); **comarca** pelo foro, pela vara, pela
+  remessa ou pela origem citada no último andamento e, na falta deles, pelo código de
+  origem já visto. O Núcleo de Justiça 4.0 do TJCE é unidade virtual: conta para o
+  Ceará, sem bolha no mapa, salvo quando o acórdão revela a comarca de origem.
+- **Resultado** pelas etiquetas do escritório (PROCEDENTE, IMPROCEDENTE, LIMINAR
+  DEFERIDA, SOBRESTADO, Em fase de recurso) e pelo texto do último andamento, que muitas
+  vezes traz a íntegra da sentença ou do acórdão. Acórdão que reforma a sentença
+  prevalece; cliente exequente em cumprimento de sentença, ou condenação lançada no
+  Astrea, conta como procedente.
+- **Tese** pelo assunto CNJ cadastrado ("Tarifas", "Empréstimo consignado", Tema
+  1.414/STJ = cartão consignado etc.); sem assunto específico contra banco, o processo
+  entra como "Bancário — tese não cadastrada".
+
+Na base atual (320 processos) a classificação automática foi conferida contra a leitura
+integral de cada processo, feita em duas passadas independentes: localidade e liminar
+coincidem em 100% dos casos e o resultado em 318 de 320 — as duas diferenças são de
+nomenclatura (acordo e condenação sem teor da sentença).
+
+### Índice de prioridade e recomendação
+
+Com poucas decisões por comarca, a taxa bruta engana (1 procedente em 1 decisão vira
+100%). A taxa de êxito — procedentes, parciais e acordos sobre as decisões de mérito — é
+ajustada em direção à média do escopo, com peso de 4 decisões, e combinada com volume e
+liminares:
+
+```
+êxito ajustado = (êxitos + 4 × média) ÷ (decisões + 4)
+índice         = 100 × (0,55 × êxito ajustado + 0,30 × √processos/√maior volume + 0,15 × liminares/processos)
+```
+
+| Recomendação | Critério |
+|---|---|
+| ▲ Escalar | ≥ 3 decisões de mérito, êxito ≥ 60% e êxito ajustado acima da média |
+| ◆ Testar | ≥ 3 processos, ou liminar deferida, ou êxito ≥ 50% nas decisões existentes |
+| ● Observar | pouco volume e nenhum sinal de resultado |
+| ▼ Cautela | ≥ 2 decisões de mérito e êxito abaixo de 40% |
+
+O índice é calculado sobre o escopo inteiro e só depois recortado por UF e comarca, para
+que filtrar uma UF não mude a nota de uma comarca. A precisão cresce com as etiquetas:
+todo processo sentenciado etiquetado no Astrea como PROCEDENTE, PARCIALMENTE PROCEDENTE,
+IMPROCEDENTE ou ACORDO vira uma decisão de mérito no cálculo.
+
+### Estrutura
+
+```
+processos.html                    página do painel
+assets/css/processos.css          componentes do painel (mapa, ranking, gráficos)
+assets/js/processos/xlsx.js       leitor de .xlsx/.csv sem dependências
+assets/js/processos/classificar.js  planilha do Astrea → registro do painel
+assets/js/processos/dados.js      base, filtros, agregação, índice e recomendação
+assets/js/processos/mapa.js       mapa SVG (coroplético por UF + bolhas por comarca)
+assets/js/processos/graficos.js   barras, matriz tese × UF e colunas mensais
+assets/js/processos/painel.js     controlador da página
+assets/data/processos-base.json   base publicada, anonimizada
+assets/data/origens-cnj.json      J.TR.OOOO → município (dado público)
+assets/data/brasil-uf.json        contornos das UFs já projetados
+assets/data/municipios.json       5.570 municípios do IBGE com coordenadas
+scripts/processos/gerar_base.mjs  gera a base publicada a partir da planilha
+scripts/processos/gerar_geo.py    gera os dois arquivos geográficos acima
+```
+
+Sem bibliotecas externas: mapa e gráficos são SVG/HTML desenhados a partir dos dados, e
+a planilha é descompactada com `DecompressionStream`, nativo do navegador.
 
 ## Automação em Python (CLI)
 

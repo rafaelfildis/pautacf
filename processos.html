@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PAINEL DE PROCESSOS CALMON E FREITAS ADVOGADOS</title>
+<meta name="description" content="Mapa dos processos do escritório Calmon e Freitas Advogados por UF e comarca, com resultados e prioridade para tráfego pago.">
+<meta name="theme-color" content="#07162e">
+<script>
+  // Mesma sessão da pauta: quem já entrou não vê a tela de login de novo.
+  try {
+    if (sessionStorage.getItem('pautacf.sessao.v1') === '1') {
+      document.documentElement.classList.add('autenticado');
+    }
+  } catch (erro) { /* sessionStorage indisponível (modo privado restrito etc.) */ }
+</script>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/processos.css">
+</head>
+<body>
+
+<!-- ---------- Tela de login ---------- -->
+<div class="tela-login" id="telaLogin">
+  <div class="tela-login__cartao">
+    <img class="tela-login__logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
+    <h1 class="tela-login__titulo">Acesso restrito</h1>
+    <p class="tela-login__subtitulo">Informe suas credenciais para acessar o painel de processos.</p>
+
+    <form id="formLogin" class="tela-login__form" autocomplete="on">
+      <label class="bloco">
+        <span class="bloco__titulo">Login</span>
+        <input type="text" id="loginUsuario" name="username" autocomplete="username"
+               placeholder="usuario@escritorio.com.br" required>
+      </label>
+
+      <label class="bloco">
+        <span class="bloco__titulo">Senha de acesso</span>
+        <input type="password" id="loginSenha" name="password" autocomplete="current-password"
+               placeholder="••••••••" required>
+      </label>
+
+      <p class="tela-login__erro" id="loginErro" role="alert" hidden>Login ou senha incorretos.</p>
+
+      <button class="btn btn--ouro tela-login__entrar" type="submit">Entrar</button>
+    </form>
+
+    <p class="tela-login__rodape">Calmon e Freitas Advogados — acesso restrito à equipe.</p>
+  </div>
+</div>
+
+<!-- ---------- Aplicação ---------- -->
+<div id="appConteudo">
+
+<header class="topo">
+  <div class="topo__marca">
+    <a href="./" class="topo__inicio" title="Voltar à pauta de audiências">
+      <img class="logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
+    </a>
+    <span class="topo__divisor" aria-hidden="true"></span>
+    <div class="topo__texto">
+      <h1>PAINEL DE PROCESSOS</h1>
+      <p>Calmon e Freitas Advogados</p>
+    </div>
+  </div>
+
+  <div class="topo__acoes">
+    <div class="sinc" id="base">
+      <span class="sinc__ponto sinc__ponto--carregando" id="basePonto"></span>
+      <span id="baseTexto">Carregando base…</span>
+    </div>
+    <button class="btn btn--fantasma" id="btnBase" type="button" title="Importar a exportação de processos do Astrea">
+      <span aria-hidden="true">⇪</span> Atualizar base
+    </button>
+    <a class="btn btn--escuro" href="./" title="Voltar à pauta de audiências">
+      <span aria-hidden="true">☰</span> Pauta de audiências
+    </a>
+    <button class="btn btn--fantasma" id="btnSair" type="button" title="Encerrar sessão">
+      <span aria-hidden="true">⏻</span> Sair
+    </button>
+  </div>
+</header>
+
+<main class="conteudo">
+
+  <!-- ---------- Filtros: escopam tudo o que vem abaixo ---------- -->
+  <section class="painel filtros filtros--processos" aria-label="Filtros do painel">
+    <div class="filtros__periodo" role="radiogroup" aria-label="Escopo">
+      <button class="aba aba--ativa" type="button" role="radio" aria-checked="true" data-escopo="massa"
+              title="Consumidor, bancário e previdenciário, sem pro bono — o que o tráfego pago capta">Demandas de massa</button>
+      <button class="aba" type="button" role="radio" aria-checked="false" data-escopo="todos">Todos os processos</button>
+    </div>
+
+    <div class="filtros__refino">
+      <label class="campo campo--busca" id="campoBusca" hidden>
+        <span class="campo__icone" aria-hidden="true">⌕</span>
+        <input type="search" id="busca" placeholder="Buscar cliente, processo, comarca…" aria-label="Buscar processos">
+      </label>
+      <label class="campo"><select id="fUf" aria-label="UF"></select></label>
+      <label class="campo"><select id="fMunicipio" aria-label="Comarca"></select></label>
+      <label class="campo"><select id="fAdversa" aria-label="Parte adversa"></select></label>
+      <label class="campo"><select id="fTese" aria-label="Tese"></select></label>
+      <label class="campo"><select id="fResultado" aria-label="Resultado"></select></label>
+      <label class="campo"><select id="fPeriodo" aria-label="Período de distribuição"></select></label>
+      <label class="campo"><select id="fResponsavel" aria-label="Responsável"></select></label>
+      <button class="btn btn--fantasma btn--mini" id="btnLimpar" type="button">Limpar filtros</button>
+    </div>
+  </section>
+
+  <!-- ---------- Indicadores ---------- -->
+  <section class="indicadores indicadores--processos" aria-label="Resumo do recorte">
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiProcessos">—</span>
+      <span class="indicador__rotulo">Processos</span>
+      <span class="indicador__nota" id="kpiProcessosNota"></span>
+    </article>
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiUfs">—</span>
+      <span class="indicador__rotulo">UFs</span>
+      <span class="indicador__nota" id="kpiComarcasNota"></span>
+    </article>
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiDecididos">—</span>
+      <span class="indicador__rotulo">Decisões de mérito</span>
+      <span class="indicador__nota" id="kpiDecididosNota"></span>
+    </article>
+    <article class="indicador indicador--sucesso">
+      <span class="indicador__valor" id="kpiTaxa">—</span>
+      <span class="indicador__rotulo">Taxa de êxito</span>
+      <span class="indicador__nota" id="kpiTaxaNota"></span>
+    </article>
+    <article class="indicador">
+      <span class="indicador__valor" id="kpiLiminares">—</span>
+      <span class="indicador__rotulo">Liminares deferidas</span>
+      <span class="indicador__nota" id="kpiLiminaresNota"></span>
+    </article>
+  </section>
+
+  <p class="aviso-amostra" id="avisoAmostra" hidden></p>
+
+  <!-- ---------- Mapa + onde investir ---------- -->
+  <section class="grade-mapa">
+    <article class="painel cartao cartao--mapa">
+      <header class="cartao__topo">
+        <div>
+          <h2 class="cartao__titulo">Onde estão os processos</h2>
+          <p class="cartao__sub" id="mapaSub">Clique numa UF para aproximar e filtrar; clique numa bolha para ver a comarca.</p>
+        </div>
+        <div class="cartao__controles">
+          <div class="segmento" id="grupoMetrica" role="radiogroup" aria-label="Métrica do mapa">
+            <button class="segmento__opcao segmento__opcao--ativa" type="button" role="radio" aria-checked="true" data-metrica="volume">Volume</button>
+            <button class="segmento__opcao" type="button" role="radio" aria-checked="false" data-metrica="exito">Êxito</button>
+            <button class="segmento__opcao" type="button" role="radio" aria-checked="false" data-metrica="recomendacao">Tráfego</button>
+          </div>
+          <label class="alternar"><input type="checkbox" id="mostrarComarcas" checked> Comarcas</label>
+          <button class="btn btn--fantasma btn--mini" id="btnBrasil" type="button" hidden>Brasil inteiro</button>
+        </div>
+      </header>
+      <div class="mapa" id="mapa"></div>
+      <div class="legenda" id="mapaLegenda" aria-label="Legenda do mapa"></div>
+    </article>
+
+    <aside class="painel cartao cartao--investir" aria-labelledby="tituloInvestir">
+      <header class="cartao__topo">
+        <div>
+          <h2 class="cartao__titulo" id="tituloInvestir">Onde investir em tráfego</h2>
+          <p class="cartao__sub">Maior índice de prioridade no recorte atual.</p>
+        </div>
+        <div class="segmento segmento--mini" id="grupoNivelFoco" role="radiogroup" aria-label="Nível">
+          <button class="segmento__opcao segmento__opcao--ativa" type="button" role="radio" aria-checked="true" data-nivel="comarca">Comarca</button>
+          <button class="segmento__opcao" type="button" role="radio" aria-checked="false" data-nivel="uf">UF</button>
+        </div>
+      </header>
+      <ol class="investir" id="listaInvestir"></ol>
+      <p class="cartao__rodape">
+        <a href="#metodologia" class="link-discreto">Como o índice é calculado</a>
+      </p>
+    </aside>
+  </section>
+
+  <!-- ---------- Ranking ---------- -->
+  <section class="painel cartao" aria-labelledby="tituloRanking">
+    <header class="cartao__topo">
+      <div>
+        <h2 class="cartao__titulo" id="tituloRanking">Ranking de localidades</h2>
+        <p class="cartao__sub" id="rankingSub">—</p>
+      </div>
+      <div class="cartao__controles">
+        <div class="segmento" id="grupoNivelRanking" role="radiogroup" aria-label="Nível do ranking">
+          <button class="segmento__opcao segmento__opcao--ativa" type="button" role="radio" aria-checked="true" data-nivel="comarca">Por comarca</button>
+          <button class="segmento__opcao" type="button" role="radio" aria-checked="false" data-nivel="uf">Por UF</button>
+        </div>
+        <button class="btn btn--escuro btn--mini" id="btnCopiarCidades" type="button"
+                title="Copia as cidades com recomendação Escalar ou Testar no formato 'Cidade, UF' para a segmentação de anúncios">Copiar cidades para anúncios</button>
+        <button class="btn btn--fantasma btn--mini" id="btnCsvRanking" type="button">Exportar CSV</button>
+      </div>
+    </header>
+    <div class="tabela-rolagem">
+      <table class="tabela tabela--ranking" id="tabelaRanking">
+        <thead>
+          <tr>
+            <th class="num" data-ordenar="posicao">#</th>
+            <th data-ordenar="nome">Localidade</th>
+            <th class="num" data-ordenar="total">Processos</th>
+            <th class="num" data-ordenar="participacao">% do total</th>
+            <th class="num" data-ordenar="decididos">Decisões</th>
+            <th class="resultados-col">Procedentes · Parciais · Acordos · Improcedentes</th>
+            <th class="num" data-ordenar="taxa">Êxito</th>
+            <th class="num" data-ordenar="exitoAjustado">Êxito ajustado</th>
+            <th class="num" data-ordenar="liminares">Liminares</th>
+            <th class="num" data-ordenar="indice">Índice</th>
+            <th data-ordenar="recomendacao">Recomendação</th>
+          </tr>
+        </thead>
+        <tbody id="corpoRanking"></tbody>
+      </table>
+    </div>
+    <div class="mais-linhas" id="maisRanking"></div>
+  </section>
+
+  <!-- ---------- Gráficos ---------- -->
+  <section class="grade-graficos">
+    <article class="painel cartao grafico" id="graficoResultados">
+      <header class="cartao__topo">
+        <div>
+          <h2 class="cartao__titulo">Resultados conhecidos por UF</h2>
+          <p class="cartao__sub">Decisões de mérito e extinções; êxito = procedentes, parciais e acordos sobre as decisões de mérito.</p>
+        </div>
+      </header>
+      <div class="legenda" id="legendaResultados"></div>
+      <div class="grafico__corpo"></div>
+    </article>
+
+    <article class="painel cartao grafico" id="graficoTeses">
+      <header class="cartao__topo">
+        <div>
+          <h2 class="cartao__titulo">Tese × UF</h2>
+          <p class="cartao__sub">Processos por tese em cada UF; abaixo, êxitos sobre decisões de mérito. Clique para filtrar.</p>
+        </div>
+      </header>
+      <div class="grafico__corpo"></div>
+    </article>
+
+    <article class="painel cartao grafico" id="graficoMeses">
+      <header class="cartao__topo">
+        <div>
+          <h2 class="cartao__titulo">Distribuições por mês</h2>
+          <p class="cartao__sub">Ritmo de entrada de processos no recorte — reflexo direto da captação.</p>
+        </div>
+      </header>
+      <div class="grafico__corpo"></div>
+    </article>
+
+    <article class="painel cartao grafico" id="graficoAdversas">
+      <header class="cartao__topo">
+        <div>
+          <h2 class="cartao__titulo">Parte adversa</h2>
+          <p class="cartao__sub">Volume por réu e êxito nas decisões de mérito. Clique para filtrar.</p>
+        </div>
+      </header>
+      <div class="grafico__corpo"></div>
+    </article>
+  </section>
+
+  <!-- ---------- Processos ---------- -->
+  <section class="painel cartao" aria-labelledby="tituloProcessos">
+    <header class="cartao__topo">
+      <div>
+        <h2 class="cartao__titulo" id="tituloProcessos">Processos do recorte</h2>
+        <p class="cartao__sub" id="processosSub">—</p>
+      </div>
+      <div class="cartao__controles">
+        <button class="btn btn--fantasma btn--mini" id="btnCsvProcessos" type="button">Exportar CSV</button>
+      </div>
+    </header>
+    <div class="tabela-rolagem">
+      <table class="tabela tabela--processos" id="tabelaProcessos">
+        <thead><tr id="cabecalhoProcessos"></tr></thead>
+        <tbody id="corpoProcessos"></tbody>
+      </table>
+    </div>
+    <div class="paginacao" id="paginacao"></div>
+  </section>
+
+  <!-- ---------- Metodologia ---------- -->
+  <section class="painel cartao metodologia" id="metodologia">
+    <details>
+      <summary><h2 class="cartao__titulo">Metodologia e limites da base</h2></summary>
+      <div class="metodologia__corpo">
+        <h3>De onde vêm os dados</h3>
+        <p>Da exportação de processos do Astrea (planilha <em>Processos</em>). A base publicada neste site é
+          <strong>anonimizada</strong>: não contém nome de cliente, CPF, número do processo nem texto de andamento —
+          apenas localidade, tribunal, unidade, parte adversa, tese, situação e resultado. Ao importar a planilha
+          pelo botão <em>Atualizar base</em>, a leitura é feita neste navegador e a base completa (com cliente e
+          número) fica salva só neste computador.</p>
+
+        <h3>Localidade</h3>
+        <p>A UF sai do número CNJ (segmento J.TR). A comarca sai do foro e da vara informados no Astrea e, na
+          falta deles, do código da unidade de origem (OOOO) já visto em outros processos. O
+          <strong>Núcleo de Justiça 4.0</strong> do TJCE é unidade virtual e não revela a comarca do cliente:
+          esses processos contam para o Ceará, mas não aparecem como bolha no mapa.</p>
+
+        <h3>Resultado</h3>
+        <p>O Astrea não exporta os campos de decisão e resultado. O painel os reconstrói, nesta ordem:
+          (1) etiquetas do escritório — PROCEDENTE, IMPROCEDENTE, LIMINAR DEFERIDA, SOBRESTADO, Em fase de recurso;
+          (2) texto do último andamento, que muitas vezes traz a íntegra da sentença ou do acórdão
+          (“julgada procedente em parte”, “recurso conhecido e não provido”, “homologada a transação”).
+          Quando o acórdão reforma a sentença, vale o resultado mais recente. Cliente exequente em cumprimento de
+          sentença conta como procedente. Como só o <em>último</em> andamento é exportado, processos já
+          sentenciados podem aparecer como “sem decisão de mérito”.</p>
+        <p><strong>Taxa de êxito</strong> = (procedentes + parcialmente procedentes + acordos) ÷ decisões de mérito.
+          Extinções sem resolução do mérito ficam fora da conta.</p>
+
+        <h3>Índice de prioridade para tráfego pago (0 a 100)</h3>
+        <p>Com poucas decisões por comarca, a taxa bruta engana (1 procedente em 1 decisão vira 100%). Por isso a taxa
+          é <strong>ajustada</strong> em direção à média do escopo (demandas de massa ou todos os processos, com os filtros de tese, réu, período e responsável — mas sem os de UF e comarca, para que a nota de uma comarca não mude ao filtrar a UF), com peso equivalente a 4 decisões:</p>
+        <p class="formula">êxito ajustado = (êxitos + 4 × média) ÷ (decisões + 4)</p>
+        <p class="formula">índice = 100 × (0,55 × êxito ajustado + 0,30 × volume relativo + 0,15 × taxa de liminares)</p>
+        <p>Volume relativo = √processos ÷ √maior volume do ranking (demanda comprovada, com retorno decrescente).
+          Taxa de liminares = liminares deferidas ÷ processos (sinal precoce de êxito).</p>
+        <ul class="metodologia__recs" id="listaRecomendacoes"></ul>
+
+        <h3>Como tornar o painel mais preciso</h3>
+        <p>Etiquetar no Astrea todo processo sentenciado — <strong>PROCEDENTE</strong>,
+          <strong>PARCIALMENTE PROCEDENTE</strong>, <strong>IMPROCEDENTE</strong> ou <strong>ACORDO</strong> — e
+          reimportar a planilha. Cada etiqueta vira uma decisão de mérito no cálculo e reduz o peso da média sobre a
+          comarca.</p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<!-- ---------- Modal: base de dados ---------- -->
+<dialog class="modal" id="modalBase">
+  <form method="dialog" class="modal__conteudo">
+    <header class="modal__topo">
+      <h2>Base de processos</h2>
+      <button class="modal__fechar" value="cancelar" aria-label="Fechar">×</button>
+    </header>
+
+    <div class="modal__corpo">
+      <p class="base-atual" id="baseAtual">—</p>
+
+      <div class="bloco">
+        <span class="bloco__titulo">Importar exportação do Astrea</span>
+        <small>No Astrea, exporte a lista de processos em Excel (.xlsx) e selecione o arquivo abaixo. A planilha é lida
+          neste navegador — nada é enviado a servidor — e a base completa, com cliente e número do processo, fica salva
+          apenas neste computador.</small>
+        <label class="soltar" id="areaSoltar">
+          <input type="file" id="arquivoBase" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
+          <span class="soltar__texto">Arraste o arquivo aqui ou <u>clique para escolher</u></span>
+          <span class="soltar__formatos">.xlsx ou .csv</span>
+        </label>
+        <p class="base-progresso" id="baseProgresso" role="status" hidden></p>
+      </div>
+
+      <div class="bloco" id="blocoBaseLocal" hidden>
+        <span class="bloco__titulo">Base local deste navegador</span>
+        <div class="bloco__linha">
+          <button class="btn btn--fantasma" id="btnUsarPublicada" type="button">Voltar à base publicada</button>
+          <button class="btn btn--fantasma" id="btnApagarLocal" type="button">Apagar base local</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="modal__rodape">
+      <button class="btn btn--ouro" value="ok" type="submit">Concluir</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+</div> <!-- /#appConteudo -->
+
+<script type="module" src="assets/js/auth.js"></script>
+<script type="module" src="assets/js/processos/painel.js"></script>
+</body>
+</html>

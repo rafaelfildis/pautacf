@@ -172,6 +172,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
 
+a.btn { text-decoration: none; }
+
 /* ================= Layout ================= */
 
 .conteudo {
