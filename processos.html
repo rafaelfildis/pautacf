@@ -93,7 +93,7 @@
     </div>
 
     <div class="filtros__refino">
-      <label class="campo campo--busca" id="campoBusca" hidden>
+      <label class="campo campo--busca" id="campoBusca">
         <span class="campo__icone" aria-hidden="true">⌕</span>
         <input type="search" id="busca" placeholder="Buscar cliente, processo, comarca…" aria-label="Buscar processos">
       </label>
@@ -289,11 +289,11 @@
       <summary><h2 class="cartao__titulo">Metodologia e limites da base</h2></summary>
       <div class="metodologia__corpo">
         <h3>De onde vêm os dados</h3>
-        <p>Da exportação de processos do Astrea (planilha <em>Processos</em>). A base publicada neste site é
-          <strong>anonimizada</strong>: não contém nome de cliente, CPF, número do processo nem texto de andamento —
-          apenas localidade, tribunal, unidade, parte adversa, tese, situação e resultado. Ao importar a planilha
-          pelo botão <em>Atualizar base</em>, a leitura é feita neste navegador e a base completa (com cliente e
-          número) fica salva só neste computador.</p>
+        <p>Da exportação de processos do Astrea (planilha <em>Processos</em>). A base publicada neste site traz
+          o <strong>número do processo</strong>, localidade, tribunal, unidade, parte adversa, tese, situação e
+          resultado — sem nome de cliente, CPF, texto de andamento, valor da causa ou data exata (a distribuição
+          aparece só com o mês). Ao importar a planilha pelo botão <em>Atualizar base</em>, a leitura é feita neste
+          navegador e a base completa, com o nome do cliente, fica salva só neste computador.</p>
 
         <h3>Localidade</h3>
         <p>A UF sai do número CNJ (segmento J.TR). A comarca sai do foro e da vara informados no Astrea e, na
