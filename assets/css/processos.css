@@ -121,8 +121,8 @@
 .mapa__uf--foco { stroke: var(--ouro-300); stroke-width: 2; }
 .mapa__uf--esmaecida { opacity: 0.45; }
 
+.mapa__rotulos { pointer-events: none; }
 .mapa__rotulo {
-  font-size: 13px;
   font-weight: 600;
   fill: rgba(199, 205, 216, 0.4);
   text-anchor: middle;
@@ -130,13 +130,12 @@
   pointer-events: none;
   paint-order: stroke;
   stroke: rgba(7, 16, 34, 0.75);
-  stroke-width: 3px;
   stroke-linejoin: round;
 }
 .mapa__rotulo--ativo { fill: var(--prata-100); }
 
 .mapa__bolha { cursor: pointer; outline: none; }
-.mapa__bolha-alvo { fill: transparent; }
+.mapa__bolha-alvo { fill: transparent; cursor: pointer; }
 .mapa__bolha-marca {
   stroke: var(--superficie-grafico);
   fill-opacity: 0.92;
@@ -259,10 +258,12 @@
 .tabela thead th.ordenado::after { content: " " attr(data-dir); }
 
 .tabela--ranking td { vertical-align: middle; }
-.tabela--ranking .col-local { min-width: 190px; }
+.tabela--ranking .col-local { min-width: 140px; }
 .tabela--ranking tbody tr.linha-rec--escalar td:first-child { box-shadow: inset 3px 0 0 var(--rec-escalar); }
 .tabela--ranking tbody tr.linha-rec--cautela td:first-child { box-shadow: inset 3px 0 0 var(--rec-cautela); }
-.resultados-col { min-width: 190px; }
+.resultados-col { min-width: 140px; }
+.tabela--ranking thead th { padding-left: 9px; padding-right: 9px; }
+.tabela--ranking td { padding-left: 9px; padding-right: 9px; }
 
 .link-celula {
   background: none; border: 0; padding: 0;
@@ -461,3 +462,5 @@
   .filtros--processos, #btnBase, .cartao__controles, .paginacao, .metodologia, .modal { display: none !important; }
   .mapa { background: #fff; }
 }
+
+.fonte-cnj { font-size: 12px; color: var(--prata-400); font-style: italic; }

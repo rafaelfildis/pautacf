@@ -15,6 +15,9 @@ data/saida/
 pautas/
 *.xlsx
 !data/exemplos/*.xlsx
+*.csv
+!data/exemplos/*.csv
+*bruto*.json
 pauta-cf-*.pdf
 pauta-cf-*.jpg
 pauta-cf-*.txt

@@ -254,19 +254,48 @@ O classificador reconstrói cada campo:
   remessa ou pela origem citada no último andamento e, na falta deles, pelo código de
   origem já visto. O Núcleo de Justiça 4.0 do TJCE é unidade virtual: conta para o
   Ceará, sem bolha no mapa, salvo quando o acórdão revela a comarca de origem.
-- **Resultado** pelas etiquetas do escritório (PROCEDENTE, IMPROCEDENTE, LIMINAR
-  DEFERIDA, SOBRESTADO, Em fase de recurso) e pelo texto do último andamento, que muitas
-  vezes traz a íntegra da sentença ou do acórdão. Acórdão que reforma a sentença
-  prevalece; cliente exequente em cumprimento de sentença, ou condenação lançada no
-  Astrea, conta como procedente.
+- **Resultado**, primeiro, pelo **histórico oficial no DataJud/CNJ** (seção abaixo). Na
+  falta dele, pelas etiquetas do escritório (PROCEDENTE, PARCIALMENTE PROCEDENTE,
+  IMPROCEDENTE, ACORDO, LIMINAR DEFERIDA/INDEFERIDA, SOBRESTADO, Em fase de recurso) e
+  pelo texto do último andamento, que muitas vezes traz a íntegra da sentença ou do
+  acórdão; um acórdão no andamento mais novo que o DataJud prevalece. Cliente exequente
+  em cumprimento de sentença, ou condenação lançada no Astrea, conta como procedente.
 - **Tese** pelo assunto CNJ cadastrado ("Tarifas", "Empréstimo consignado", Tema
   1.414/STJ = cartão consignado etc.); sem assunto específico contra banco, o processo
   entra como "Bancário — tese não cadastrada".
 
-Na base atual (320 processos) a classificação automática foi conferida contra a leitura
+Na base atual (320 processos) a classificação do Astrea foi conferida contra a leitura
 integral de cada processo, feita em duas passadas independentes: localidade e liminar
-coincidem em 100% dos casos e o resultado em 318 de 320 — as duas diferenças são de
-nomenclatura (acordo e condenação sem teor da sentença).
+coincidem em 100% dos casos e o resultado em 318 de 320. Os testes ficam em
+`tests/test_processos.mjs` (`node --test tests/test_processos.mjs`).
+
+### Histórico do CNJ (DataJud)
+
+A exportação do Astrea traz só o último andamento. O histórico completo vem da **API
+Pública do DataJud** (CNJ), que devolve todos os movimentos de cada processo com os
+códigos das Tabelas Processuais Unificadas — procedência (219), procedência em parte
+(221), improcedência (220), transação (466), extinções sem mérito, liminar concedida
+(332, 339) ou não concedida (785, 792), recurso provido/parcial/não provido (237, 238,
+239) e trânsito em julgado (848). Na base atual ele revelou 100 processos com resultado,
+contra 28 visíveis na planilha.
+
+```bash
+node scripts/processos/sincronizar_datajud.mjs caminho/para/Processos.xlsx
+node scripts/processos/gerar_base.mjs caminho/para/Processos.xlsx --datajud data/saida/datajud.json
+```
+
+- A consulta roda fora do navegador: a API não libera chamadas de páginas web. O
+  resultado bruto fica em `data/saida/` (ignorada pelo Git); a base publicada recebe só
+  o resultado consolidado, e a importação local no navegador herda esses resultados
+  pelo número do processo.
+- A chave pública é a divulgada na wiki do DataJud; se o CNJ trocá-la, informe a nova
+  em `DATAJUD_API_KEY`. Limite de uso: 120 requisições por minuto.
+- Os tribunais enviam os dados com semanas de atraso, e processos em segredo de justiça
+  não aparecem. O DataJud não informa quem recorreu: vale a regra de que recorre quem
+  perdeu.
+- Em ambiente com proxy, o Node precisa de `NODE_USE_ENV_PROXY=1`.
+- Fonte a citar (Portaria CNJ 374/2026): DataJud — Base Nacional de Dados do Poder
+  Judiciário, Conselho Nacional de Justiça.
 
 ### Índice de prioridade e recomendação
 
@@ -277,15 +306,16 @@ liminares:
 
 ```
 êxito ajustado = (êxitos + 4 × média) ÷ (decisões + 4)
-índice         = 100 × (0,55 × êxito ajustado + 0,30 × √processos/√maior volume + 0,15 × liminares/processos)
+índice         = 100 × (0,55 × êxito ajustado + 0,30 × √processos/√maior volume + 0,15 × liminares ajustadas)
+liminares ajustadas = (liminares + 4 × taxa de liminares do escopo) ÷ (processos + 4)
 ```
 
 | Recomendação | Critério |
 |---|---|
 | ▲ Escalar | ≥ 3 decisões de mérito, êxito ≥ 60% e êxito ajustado acima da média |
-| ◆ Testar | ≥ 3 processos, ou liminar deferida, ou êxito ≥ 50% nas decisões existentes |
-| ● Observar | pouco volume e nenhum sinal de resultado |
-| ▼ Cautela | ≥ 2 decisões de mérito e êxito abaixo de 40% |
+| ◆ Testar | ≥ 3 processos e, havendo decisões, êxito ≥ 50% |
+| ● Observar | menos de 3 processos (volume pequeno demais para decidir) |
+| ▼ Cautela | ≥ 2 decisões de mérito e êxito abaixo de 50% (maioria desfavorável) |
 
 O índice é calculado sobre o escopo inteiro e só depois recortado por UF e comarca, para
 que filtrar uma UF não mude a nota de uma comarca. A precisão cresce com as etiquetas:
@@ -309,6 +339,8 @@ assets/data/brasil-uf.json        contornos das UFs já projetados
 assets/data/municipios.json       5.570 municípios do IBGE com coordenadas
 scripts/processos/gerar_base.mjs  gera a base publicada a partir da planilha
 scripts/processos/gerar_geo.py    gera os dois arquivos geográficos acima
+scripts/processos/sincronizar_datajud.mjs  consulta o histórico no DataJud (CNJ)
+assets/js/processos/movimentos.js  códigos TPU do DataJud → resultado do painel
 ```
 
 Sem bibliotecas externas: mapa e gráficos são SVG/HTML desenhados a partir dos dados, e

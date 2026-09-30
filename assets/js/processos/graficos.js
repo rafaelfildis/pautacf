@@ -128,7 +128,7 @@ export function barrasResultado(container, grupos, { aoClicar } = {}) {
     trilho.appendChild(pilha);
     const valor = criar('span', 'barra__valor', g.decididos ? `${g.exitos}/${g.decididos} · ${pct(g.taxa)}` : 'só extinções');
     trilho.appendChild(valor);
-    const pendentes = criar('span', 'barra__extra', g.pendente ? `+${g.pendente} sem decisão` : '');
+    const pendentes = criar('span', 'barra__extra', g.pendente ? `+${g.pendente} sem resultado` : '');
     linha.append(rotulo, trilho, pendentes);
     corpo.appendChild(linha);
   }
@@ -207,8 +207,9 @@ export function colunasMes(container, serie) {
     corpo.appendChild(criar('p', 'grafico__vazio', 'Sem datas de distribuição no recorte atual.'));
     return;
   }
-  const largura = 640;
-  const altura = 210;
+  // viewBox na largura real do cartão: no celular o texto do eixo não encolhe.
+  const largura = Math.max(300, Math.round(corpo.clientWidth || 640));
+  const altura = largura < 480 ? 190 : 210;
   const m = { topo: 18, dir: 8, base: 28, esq: 30 };
   const maxBruto = Math.max(...serie.map((s) => s.total));
   const passo = maxBruto <= 5 ? 1 : maxBruto <= 20 ? 5 : maxBruto <= 50 ? 10 : 25;
@@ -235,7 +236,8 @@ export function colunasMes(container, serie) {
   const faixa = (largura - m.esq - m.dir) / serie.length;
   const barra = Math.min(24, faixa * 0.7);
   // Rótulo de eixo a cada N meses, alinhado a janeiro/julho quando possível.
-  const cada = serie.length <= 12 ? 1 : serie.length <= 24 ? 3 : serie.length <= 48 ? 6 : 12;
+  const cabem = Math.max(3, Math.floor(largura / 58)); // rótulos "mmm/aa" que cabem sem colidir
+  const cada = [1, 2, 3, 6, 12, 24].find((n) => Math.ceil(serie.length / n) <= cabem) || 24;
   const iMax = serie.findIndex((s) => s.total === maxBruto);
   serie.forEach((s, i) => {
     const cx = m.esq + faixa * i + faixa / 2;

@@ -103,7 +103,9 @@ function normalizarBusca(texto) {
 }
 
 export function filtrar(registros, f, referencia, { ignorar = [] } = {}) {
-  const busca = normalizarBusca(f.busca).trim();
+  const busca = ignorar.includes('busca') ? '' : normalizarBusca(f.busca).trim();
+  // Número CNJ digitado com ou sem máscara: compara só os dígitos.
+  const digitos = /^[\d.\-\s]+$/.test(busca) && busca.replace(/\D/g, '').length >= 5 ? busca.replace(/\D/g, '') : '';
   const usa = (campo) => !ignorar.includes(campo) && f[campo];
   return registros.filter((r) => {
     if (f.escopo === 'massa' && (!TESES_MASSA.has(r.tese) || r.proBono)) return false;
@@ -116,7 +118,9 @@ export function filtrar(registros, f, referencia, { ignorar = [] } = {}) {
     }
     if (usa('responsavel') && r.responsavel !== f.responsavel) return false;
     if (!ignorar.includes('periodo') && !dentroDoPeriodo(r, f.periodo, referencia)) return false;
-    if (busca) {
+    if (digitos) {
+      if (!String(r.numero || '').replace(/\D/g, '').includes(digitos)) return false;
+    } else if (busca) {
       const alvo = normalizarBusca([r.cliente, r.numero, r.municipio, r.uf, r.adversa, r.unidade, r.tribunal].join(' '));
       if (!alvo.includes(busca)) return false;
     }
@@ -178,23 +182,26 @@ export function resumo(registros) {
  *   índice = 100 · (0,55·êxito ajustado + 0,30·volume relativo + 0,15·liminares)
  *
  * volume relativo = √processos / √(maior volume do ranking) — demanda comprovada
- * liminares       = liminares deferidas / processos (sinal precoce de êxito)
+ * liminares       = taxa de liminares deferidas, ajustada do mesmo jeito que o
+ *                   êxito, para que 1 liminar em 1 processo não valha 100%
  */
 export const K_PRIOR = 4;
+/** Mínimo de processos para uma localidade receber recomendação de investimento. */
+export const VOLUME_MINIMO = 3;
 export const PESOS = { exito: 0.55, volume: 0.30, liminar: 0.15 };
 
 export const RECOMENDACOES = {
   escalar: { rotulo: 'Escalar', icone: '▲', descricao: 'Êxito comprovado acima da média, com decisões suficientes. Priorizar verba.' },
-  testar: { rotulo: 'Testar', icone: '◆', descricao: 'Há demanda (volume ou liminares), mas poucas decisões de mérito. Verba de teste e acompanhamento.' },
-  observar: { rotulo: 'Observar', icone: '●', descricao: 'Volume baixo e sem decisões. Aguardar sinais antes de investir.' },
+  testar: { rotulo: 'Testar', icone: '◆', descricao: 'Há demanda comprovada e nenhum sinal desfavorável. Verba de teste e acompanhamento.' },
+  observar: { rotulo: 'Observar', icone: '●', descricao: 'Volume ainda pequeno para decidir. Acompanhar antes de investir.' },
   cautela: { rotulo: 'Cautela', icone: '▼', descricao: 'Maioria das decisões de mérito desfavorável. Rever tese ou suspender anúncios.' },
 };
 
 function recomendar(g, media) {
   const taxa = g.decididos ? g.exitos / g.decididos : null;
-  if (g.decididos >= 2 && taxa < 0.4) return 'cautela';
-  if (g.decididos >= 3 && taxa >= 0.6 && g.exitoAjustado >= media) return 'escalar';
-  if (g.total >= 3 || g.liminares >= 1 || (g.decididos >= 1 && taxa >= 0.5)) return 'testar';
+  if (g.decididos >= 2 && taxa < 0.5) return 'cautela';
+  if (g.decididos >= 3 && taxa >= 0.6 && g.exitoAjustado > media) return 'escalar';
+  if (g.total >= VOLUME_MINIMO && (taxa === null || taxa >= 0.5)) return 'testar';
   return 'observar';
 }
 
@@ -210,13 +217,14 @@ export function ranking(registros, nivel) {
   const grupos = [...agrupar(registros, chaveDe).values()];
   const geral = resumo(registros);
   const media = geral.taxa ?? 0.5;
+  const mediaLiminar = geral.total ? geral.liminares / geral.total : 0;
   const maiorVolume = Math.max(1, ...grupos.map((g) => g.total));
 
   for (const g of grupos) {
     g.taxa = g.decididos ? g.exitos / g.decididos : null;
     g.exitoAjustado = (g.exitos + K_PRIOR * media) / (g.decididos + K_PRIOR);
     g.volumeRel = Math.sqrt(g.total) / Math.sqrt(maiorVolume);
-    g.liminarRel = g.total ? g.liminares / g.total : 0;
+    g.liminarRel = (g.liminares + K_PRIOR * mediaLiminar) / (g.total + K_PRIOR);
     g.indice = Math.round(100 * (PESOS.exito * g.exitoAjustado + PESOS.volume * g.volumeRel + PESOS.liminar * g.liminarRel));
     g.recomendacao = recomendar(g, media);
     g.confianca = confiabilidade(g.decididos);

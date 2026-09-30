@@ -203,9 +203,9 @@
             <th class="num" data-ordenar="posicao">#</th>
             <th data-ordenar="nome">Localidade</th>
             <th class="num" data-ordenar="total">Processos</th>
-            <th class="num" data-ordenar="participacao">% do total</th>
+            <th class="num" data-ordenar="participacao" title="Participação no escopo (demandas de massa ou todos), sem os filtros de UF e comarca">% do escopo</th>
             <th class="num" data-ordenar="decididos">Decisões</th>
-            <th class="resultados-col">Procedentes · Parciais · Acordos · Improcedentes</th>
+            <th class="resultados-col" title="Procedentes · Parciais · Acordos · Improcedentes">Resultados</th>
             <th class="num" data-ordenar="taxa">Êxito</th>
             <th class="num" data-ordenar="exitoAjustado">Êxito ajustado</th>
             <th class="num" data-ordenar="liminares">Liminares</th>
@@ -296,19 +296,28 @@
           navegador e a base completa, com o nome do cliente, fica salva só neste computador.</p>
 
         <h3>Localidade</h3>
-        <p>A UF sai do número CNJ (segmento J.TR). A comarca sai do foro e da vara informados no Astrea e, na
-          falta deles, do código da unidade de origem (OOOO) já visto em outros processos. O
-          <strong>Núcleo de Justiça 4.0</strong> do TJCE é unidade virtual e não revela a comarca do cliente:
-          esses processos contam para o Ceará, mas não aparecem como bolha no mapa.</p>
+        <p>Na Justiça Estadual e na do Trabalho, a UF sai do número CNJ (segmento J.TR); na Justiça Federal, da
+          seção judiciária informada. A comarca sai do foro e da vara informados no Astrea, da remessa ou da origem
+          citada no último andamento e, na falta deles, do código da unidade de origem (OOOO) ou do município
+          informado pelo DataJud. Os <strong>Núcleos de Justiça 4.0</strong> (TJCE, TJPE) são unidades virtuais e
+          não revelam a comarca do cliente: esses processos contam para a UF, mas não aparecem como bolha no
+          mapa nem recebem posição no ranking.</p>
 
         <h3>Resultado</h3>
-        <p>O Astrea não exporta os campos de decisão e resultado. O painel os reconstrói, nesta ordem:
-          (1) etiquetas do escritório — PROCEDENTE, IMPROCEDENTE, LIMINAR DEFERIDA, SOBRESTADO, Em fase de recurso;
-          (2) texto do último andamento, que muitas vezes traz a íntegra da sentença ou do acórdão
-          (“julgada procedente em parte”, “recurso conhecido e não provido”, “homologada a transação”).
-          Quando o acórdão reforma a sentença, vale o resultado mais recente. Cliente exequente em cumprimento de
-          sentença conta como procedente. Como só o <em>último</em> andamento é exportado, processos já
-          sentenciados podem aparecer como “sem decisão de mérito”.</p>
+        <p>A fonte principal é o <strong>histórico oficial do processo no DataJud (CNJ)</strong>: os movimentos
+          padronizados pelas Tabelas Processuais Unificadas — procedência (219), procedência em parte (221),
+          improcedência (220), homologação de transação (466), extinções sem mérito, liminar concedida (332, 339) ou
+          não concedida (785, 792), recurso provido, provido em parte ou não provido (237, 238, 239) e trânsito em
+          julgado (848). O DataJud não informa quem recorreu: vale a regra de que recorre quem perdeu. Os tribunais
+          enviam os dados com semanas de atraso.</p>
+        <p>Quando o DataJud não traz a decisão, o painel usa o Astrea: (1) etiquetas do escritório — PROCEDENTE,
+          PARCIALMENTE PROCEDENTE, IMPROCEDENTE, ACORDO, LIMINAR DEFERIDA, LIMINAR INDEFERIDA, SOBRESTADO, Em fase de
+          recurso; (2) o texto do último andamento, que muitas vezes traz a íntegra da sentença ou do acórdão —
+          e, se esse acórdão for mais novo que o DataJud, ele prevalece. Cliente exequente em cumprimento de sentença
+          conta como procedente. Processos sem nenhuma dessas informações aparecem como “resultado não
+          identificado”.</p>
+        <p class="fonte-cnj">Fonte dos andamentos: DataJud — Base Nacional de Dados do Poder Judiciário, Conselho
+          Nacional de Justiça (API Pública).</p>
         <p><strong>Taxa de êxito</strong> = (procedentes + parcialmente procedentes + acordos) ÷ decisões de mérito.
           Extinções sem resolução do mérito ficam fora da conta.</p>
 
@@ -318,7 +327,8 @@
         <p class="formula">êxito ajustado = (êxitos + 4 × média) ÷ (decisões + 4)</p>
         <p class="formula">índice = 100 × (0,55 × êxito ajustado + 0,30 × volume relativo + 0,15 × taxa de liminares)</p>
         <p>Volume relativo = √processos ÷ √maior volume do ranking (demanda comprovada, com retorno decrescente).
-          Taxa de liminares = liminares deferidas ÷ processos (sinal precoce de êxito).</p>
+          Taxa de liminares = liminares deferidas ÷ processos (sinal precoce de êxito), ajustada do mesmo modo que o
+          êxito, para que 1 liminar em 1 processo não valha 100%.</p>
         <ul class="metodologia__recs" id="listaRecomendacoes"></ul>
 
         <h3>Como tornar o painel mais preciso</h3>
