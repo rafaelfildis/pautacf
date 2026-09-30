@@ -1,6 +1,6 @@
 /* Gera a base publicada do Painel de Processos a partir da exportação do Astrea.
  *
- *   node scripts/processos/gerar_base.mjs <Processos.xlsx> [--json-bruto <saida.json>]
+ *   node scripts/processos/gerar_base.mjs <Processos.xlsx> [--datajud data/saida/datajud.json] [--json-bruto <saida.json>]
  *
  * Usa exatamente o mesmo classificador da importação feita no navegador
  * (assets/js/processos/classificar.js) e grava assets/data/processos-base.json.
@@ -23,6 +23,7 @@ import { lerXlsx, lerCsv } from '../../assets/js/processos/xlsx.js';
 import {
   classificarPlanilha, criarIndiceMunicipios, paraPublicacao, origensAprendidas,
 } from '../../assets/js/processos/classificar.js';
+import { consolidarProcesso, aplicarHistorico } from '../../assets/js/processos/movimentos.js';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DADOS = resolve(RAIZ, 'assets', 'data');
@@ -43,7 +44,20 @@ const caminhoOrigens = resolve(DADOS, 'origens-cnj.json');
 let origens = {};
 try { origens = JSON.parse(readFileSync(caminhoOrigens, 'utf-8')).origens || {}; } catch { /* primeira execução */ }
 
-const registros = classificarPlanilha(linhas, indice, origens);
+let registros = classificarPlanilha(linhas, indice, origens);
+
+// Histórico oficial do CNJ (scripts/processos/sincronizar_datajud.mjs), quando houver.
+const iDatajud = opcoes.indexOf('--datajud');
+let datajudEm = null;
+if (iDatajud >= 0 && opcoes[iDatajud + 1]) {
+  const dj = JSON.parse(readFileSync(opcoes[iDatajud + 1], 'utf-8'));
+  datajudEm = dj.geradoEm?.slice(0, 10) || null;
+  const porIbge = new Map(municipios.municipios.map(([ibge, nome, uf, lat, lon]) => [ibge, { ibge, nome, uf, lat, lon }]));
+  registros = registros.map((r) => {
+    const p = dj.processos?.[r.numero];
+    return p?.fontes?.length ? aplicarHistorico(r, consolidarProcesso(p.fontes), porIbge) : { ...r, datajud: false };
+  });
+}
 
 // Dicionário de origens: só entra o que veio do texto do foro/vara, sem conflito.
 const aprendidas = { ...origens };
@@ -59,7 +73,10 @@ const base = {
   versao: 1,
   geradoEm: new Date().toISOString().slice(0, 10),
   referencia: datas.at(-1) || null,
-  fonte: 'Exportação de processos do Astrea — sem nome de cliente',
+  fonte: datajudEm
+    ? `Exportação de processos do Astrea + histórico do DataJud/CNJ (consultado em ${datajudEm})`
+    : 'Exportação de processos do Astrea — sem nome de cliente',
+  datajud: datajudEm,
   total: registros.length,
   registros: registros.map(paraPublicacao),
 };

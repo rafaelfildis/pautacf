@@ -85,9 +85,12 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
   el('rect', { width: 8, height: 8, fill: '#1b3358' }, hachura);
   el('line', { x1: 0, y1: 0, x2: 0, y2: 8, stroke: '#51678c', 'stroke-width': 2.2 }, hachura);
 
+  // Ordem das camadas: UFs, áreas de toque das bolhas (abaixo das marcas, para a
+  // bolha visível sempre ganhar o clique), marcas das bolhas e, por cima, rótulos.
   const camadaUfs = el('g', { class: 'mapa__ufs' }, svg);
-  const camadaRotulos = el('g', { class: 'mapa__rotulos', 'aria-hidden': 'true' }, svg);
+  const camadaAlvos = el('g', { class: 'mapa__alvos' }, svg);
   const camadaBolhas = el('g', { class: 'mapa__bolhas' }, svg);
+  const camadaRotulos = el('g', { class: 'mapa__rotulos', 'aria-hidden': 'true' }, svg);
   container.appendChild(svg);
 
   const dica = document.createElement('div');
@@ -158,7 +161,8 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
     const largura = dica.offsetWidth;
     const altura = dica.offsetHeight;
     const esquerda = Math.min(Math.max(8, x + 14), area.width - largura - 8);
-    const topo = y + altura + 20 > area.height ? y - altura - 14 : y + 14;
+    const limite = Math.min(area.height, window.innerHeight - area.top);
+    const topo = y + altura + 20 > limite ? y - altura - 14 : y + 14;
     dica.style.left = `${esquerda}px`;
     dica.style.top = `${Math.max(8, topo)}px`;
   }
@@ -193,6 +197,7 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
     const p = caminhos.get(uf);
     if (!p) return inteiro;
     const b = p.getBBox();
+    if (!b.width) return null; // SVG ainda oculto (tela de login): tenta de novo ao aparecer
     const folga = Math.max(b.width, b.height) * 0.12 + 8;
     // Mantém a proporção do mapa inteiro para não distorcer.
     const proporcao = inteiro.w / inteiro.h;
@@ -224,9 +229,14 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
 
   function desenharBolhas() {
     camadaBolhas.replaceChildren();
+    camadaAlvos.replaceChildren();
+    const tela = svg.getBoundingClientRect();
+    // Unidades do viewBox por pixel de tela. Com max-height o SVG fica
+    // "letterboxed": vale a maior das duas razões.
+    const porPixel = Math.max(caixa.w / (tela.width || 800), caixa.h / (tela.height || 800));
+    camadaRotulos.style.fontSize = `${12 * porPixel}px`;
+    camadaRotulos.style.strokeWidth = `${3 * porPixel}px`;
     if (!estado.mostrarComarcas) return;
-    const pixels = svg.getBoundingClientRect().width || 800;
-    const porPixel = caixa.w / pixels; // unidades do viewBox por pixel de tela
     const maior = Math.max(1, ...estado.comarcas.map((c) => c.total));
     const lista = estado.comarcas
       .filter((c) => c.lat != null && c.lon != null)
@@ -242,9 +252,11 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
         role: 'button',
         'aria-label': `${c.nome} (${c.uf}): ${c.total} processos`,
       }, camadaBolhas);
-      // Área de toque maior que a marca: no mínimo 24 px.
-      el('circle', { cx: x, cy: y, r: Math.max(r, 12 * porPixel), class: 'mapa__bolha-alvo' }, grupo);
-      const cor = estado.metrica === 'volume' ? '#071022' : corDoGrupo(c, estado.metrica);
+      // Área de toque maior que a marca (mínimo 24 px), numa camada abaixo das marcas.
+      const alvo = el('circle', { cx: x, cy: y, r: Math.max(r, 12 * porPixel), class: 'mapa__bolha-alvo' }, camadaAlvos);
+      // Sem decisões no modo Êxito: cinza sólido, para não sumir sobre a UF hachurada.
+      const semDecisao = estado.metrica === 'exito' && !c.decididos;
+      const cor = estado.metrica === 'volume' ? '#071022' : semDecisao ? '#3a4660' : corDoGrupo(c, estado.metrica);
       el('circle', {
         cx: x, cy: y, r, fill: cor, class: 'mapa__bolha-marca',
         'stroke-width': (estado.metrica === 'volume' ? 1.5 : 2) * porPixel,
@@ -257,6 +269,10 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
       grupo.addEventListener('blur', esconderDica);
       const escolher = (e) => { e.stopPropagation(); aoClicarComarca?.(c); };
       grupo.addEventListener('click', escolher);
+      alvo.addEventListener('pointerenter', abrir);
+      alvo.addEventListener('pointermove', posicionarDica);
+      alvo.addEventListener('pointerleave', esconderDica);
+      alvo.addEventListener('click', escolher);
       grupo.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); escolher(e); } });
     }
   }
@@ -277,7 +293,15 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
   let ultimaLargura = 0;
   const observador = new ResizeObserver(() => {
     const largura = svg.getBoundingClientRect().width;
-    if (Math.abs(largura - ultimaLargura) > 1) { ultimaLargura = largura; desenharBolhas(); }
+    if (Math.abs(largura - ultimaLargura) > 1) {
+      const estavaOculto = ultimaLargura === 0;
+      ultimaLargura = largura;
+      if (estavaOculto && estado.ufFoco) {
+        const alvo = caixaDaUf(estado.ufFoco);
+        if (alvo) { caixa = alvo; svg.setAttribute('viewBox', `${caixa.x} ${caixa.y} ${caixa.w} ${caixa.h}`); }
+      }
+      desenharBolhas();
+    }
   });
   observador.observe(svg);
 
@@ -286,7 +310,10 @@ export function criarMapa(container, geo, { aoClicarUf, aoClicarComarca } = {}) 
       const focoMudou = novo.ufFoco !== undefined && novo.ufFoco !== estado.ufFoco;
       estado = { ...estado, ...novo };
       pintarUfs();
-      if (focoMudou) animarPara(estado.ufFoco ? caixaDaUf(estado.ufFoco) : inteiro);
+      if (focoMudou) {
+        const alvo = estado.ufFoco ? caixaDaUf(estado.ufFoco) : inteiro;
+        if (alvo) animarPara(alvo); else desenharBolhas();
+      }
       else desenharBolhas();
     },
   };

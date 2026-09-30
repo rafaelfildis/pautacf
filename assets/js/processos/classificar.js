@@ -62,8 +62,8 @@ export const RESULTADOS = {
   parcial: 'Parcialmente procedente',
   acordo: 'Acordo homologado',
   improcedente: 'Improcedente',
-  sem_merito: 'Extinto sem mérito',
-  pendente: 'Sem decisão de mérito',
+  sem_merito: 'Extinto sem resolução do mérito',
+  pendente: 'Resultado não identificado',
 };
 
 /** Resultados que contam como êxito na taxa de procedência. */
@@ -162,9 +162,11 @@ function ufDoProcesso(cnj, textoLocal, etiquetas) {
       if (NOMES_UF[uf]) return uf;
     }
     for (const [uf, nome] of Object.entries(NOMES_UF)) {
-      if (n.includes(`judiciaria d${uf === 'BA' || uf === 'PB' ? 'a' : 'o'} ${normalizar(nome)}`)) return uf;
+      if (new RegExp(`judiciaria d[aeo] ${normalizar(nome)}\\b`).test(n)) return uf;
     }
-    return UF_SECAO_FEDERAL[cnj.oooo.slice(0, 2)] ?? null;
+    // Prefixos de seção conferidos só para o TRF1 (e o TRF6, que herdou Minas).
+    if (cnj.tr === '01' || cnj.tr === '06') return UF_SECAO_FEDERAL[cnj.oooo.slice(0, 2)] ?? null;
+    return null;
   }
   const tj = String(etiquetas ?? '').match(/\bTJ([A-Z]{2})\b/);
   return tj && NOMES_UF[tj[1]] ? tj[1] : null;
@@ -231,17 +233,24 @@ function porExpressao(indice, uf, texto) {
   return null;
 }
 
+/** Tira do texto o nome do estado ("Rio Grande do Sul", "Estado de Goiás"), que não é cidade. */
+function semNomeDoEstado(texto, uf) {
+  const nome = textoComparavel(NOMES_UF[uf] || '').trim();
+  if (!nome) return texto;
+  return texto.replace(new RegExp(` (estado d[aeo] )?${nome} `, 'g'), ' ');
+}
+
 /** Foro que começa pelo nome da cidade ("Natal - Juizado Especial Cível", "SALVADOR - REGIÃO METROPOLITANA"). */
 function porInicio(indice, uf, texto) {
   const lista = indice.porUf.get(uf) || [];
-  const n = textoComparavel(texto);
+  const n = semNomeDoEstado(textoComparavel(texto), uf);
   return lista.find((mun) => n.startsWith(` ${mun.norm} `)) ?? null;
 }
 
 /** Último recurso textual: o maior nome de município da UF contido no texto. */
 function porVarredura(indice, uf, texto) {
   const lista = indice.porUf.get(uf) || [];
-  const n = textoComparavel(texto);
+  const n = semNomeDoEstado(textoComparavel(texto), uf);
   for (const mun of lista) {
     if (mun.norm.length < 4 || NOMES_AMBIGUOS.has(mun.norm)) continue;
     if (n.includes(` ${mun.norm} `)) return mun;
@@ -304,7 +313,7 @@ export function resolverLocal(linha, indice, origens = {}) {
       municipio = null; // unidade virtual: atende o estado todo
     } else if (/\bvsje\b/.test(nLocal) && uf === 'BA') {
       municipio = porNome(indice, uf, 'Salvador'); fonte = 'vara';
-    } else if (/secao judiciaria d[ao] |\bsj[a-z]{2}\b/.test(nLocal) && !/subsecao/.test(nLocal)) {
+    } else if (/secao judiciaria d[aeo] |\bsj[a-z]{2}\b/.test(nLocal) && !/subsecao/.test(nLocal)) {
       municipio = porNome(indice, uf, CAPITAIS[uf]); fonte = 'foro';
     } else if (/jec central - vergueiro|foro central/.test(nLocal) && uf === 'SP') {
       municipio = porNome(indice, uf, 'São Paulo'); fonte = 'vara';
@@ -314,10 +323,12 @@ export function resolverLocal(linha, indice, origens = {}) {
     // Núcleo 4.0 e na Turma Recursal, qual foi a comarca de origem.
     const remessa = remessaDoHistorico(linha['Descrição do último histórico']);
     const origemAcordao = origemDoHistorico(linha['Descrição do último histórico']);
-    for (const texto of [remessa, !municipio && origemAcordao]) {
+    // Fontes próprias: nem a remessa nem a origem do acórdão descrevem a
+    // unidade do número CNJ, então não entram no dicionário de origens.
+    for (const [texto, origem] of [[remessa, 'remessa'], [!municipio && origemAcordao, 'acordao']]) {
       if (!texto) continue;
       const achado = porExpressao(indice, uf, texto);
-      if (achado) { municipio = achado; fonte = 'texto'; break; }
+      if (achado) { municipio = achado; fonte = origem; break; }
     }
 
     if (!municipio && unidade !== 'Núcleo de Justiça 4.0') {
@@ -396,13 +407,15 @@ const REUS_CONHECIDOS = [
 
 const PAPEIS_ADVERSOS = /\((reu|ré|réu|requerido|requerida|reclamado|reclamada|promovido|promovida|executado|executada|demandado|demandada|recorrido|recorrida|impetrado)\)/i;
 
-const MARCAS_EMPRESA = /\b(s\.?\/?a\.?|ltda|eireli|epp|me|banco|bank|cnpj|instituto|associacao|fundacao|condominio|companhia|cia|sociedade|estado d[aeo]|municipio|uniao|empresa|servicos|comercio|industria|holding|financeira|credito|seguradora|seguros|administradora|consorcio|linhas aereas|energia|telecom|educacao|ensino|hospital|clinica|cooperativa|juizo|advogados|participacoes|consultoria|investimentos?|capitalizacao|assistencia|previdencia|servidores)\b/;
+const MARCAS_EMPRESA = /\b(s\.?\/?a\.?|ltda|banco|bank|cnpj|instituto|associacao|fundacao|condominio|companhia|cia|sociedade|estado d[aeo]|municipio|uniao|empresa|servicos|comercio|industria|holding|financeira|credito|seguradora|seguros|administradora|consorcio|linhas aereas|energia|telecom|educacao|ensino|hospital|clinica|cooperativa|juizo|advogados|participacoes|consultoria|investimentos?|capitalizacao|assistencia|previdencia|servidores)\b/;
 
 /** Parte adversa pessoa física: o nome não pode ir para a base publicada. */
 export function pareceEmpresa(nome) {
   const n = normalizar(nome);
   if (!n) return true;
   if (/\bcpf\b/.test(n)) return false;
+  // Firma individual (ME, EPP, EIRELI, MEI) costuma levar o nome do dono.
+  if (/\b(me|epp|eireli|mei)\b/.test(n)) return false;
   if (REUS_CONHECIDOS.some(([re]) => re.test(n))) return true;
   return MARCAS_EMPRESA.test(n);
 }
@@ -427,7 +440,9 @@ function parteAdversaBruta(linha, clienteReu) {
   // "Outros envolvidos" separa por vírgula, mas nomes como "FACTA FINANCEIRA
   // S.A., CRÉDITO, FINANCIAMENTO E INVESTIMENTO" também têm vírgula: o papel
   // entre parênteses é o separador confiável.
-  const partes = outros.split(/(?<=\))\s*,\s*/);
+  // O próprio cliente pode aparecer na lista (ex.: como Recorrido): fica de fora.
+  const cliente = normalizar(String(linha.Cliente || '').split(/\s+-\s+/)[0]);
+  const partes = outros.split(/(?<=\))\s*,\s*/).filter((p) => !cliente || !normalizar(p).startsWith(cliente));
   const alvo = clienteReu ? /\((autor|autora|requerente|reclamante|exequente|promovente)\)/i : PAPEIS_ADVERSOS;
   const adversa = partes.find((p) => alvo.test(p) && !/advogad/i.test(p));
   if (adversa) return adversa.replace(/\s*\([^)]*\)\s*$/, '');
@@ -478,32 +493,55 @@ export function classificarTese(linha, adversa) {
 
 // ---------------------------------------------------------------- resultado
 
+// Verbo de julgamento seguido de até quatro palavras ("julgo, portanto, procedentes").
+const JULGA = String.raw`\b(?:julgad[ao]s?|julgo|julgou|julga|julgar)[ ,]+(?:[a-z]+[ ,]+){0,4}`;
+
 const RE = {
-  parcial: /\b(julgad[ao]s?|julgo|julgou|julga|julgar)( [a-z,]+){0,4} (parcialmente procedentes?|procedentes? em parte)|procedencia parcial|parcial procedencia|procedencia em parte|parcialmente procedentes? (o|os) pedidos?/,
-  improcedente: /\b(julgad[ao]s?|julgo|julgou|julga|julgar)( [a-z,]+){0,4} improcedentes?\b(?! o pedido contraposto)|sentenca de improcedencia/,
-  procedente: /\b(julgad[ao]s?|julgo|julgou|julga|julgar)( [a-z,]+){0,4} procedentes?\b(?! em parte)|sentenca de procedencia/,
-  semMerito: /extint[oa] o processo|julgo extint|extincao do processo|sem resolucao d[eo] merito|extinto sem/,
-  acordo: /homologad[oa] a transacao|homolog[oa] (o |a )?(acordo|transacao)|acordo homologado|descumprimento (do |de )?acordo/,
-  liminarDeferida: /concedida a (medida )?liminar|liminar deferida|defiro (a |o pedido de )?(tutela|liminar|medida liminar)|tutela (provisoria )?(de urgencia |antecipada )?deferida|deferida a (tutela|liminar)|concedo a tutela|tutela de urgencia concedida/,
+  parcial: new RegExp(`${JULGA}(?:parcialmente procedentes?|procedentes?,? em parte)|procedencia parcial|parcial procedencia|procedencia em parte|parcialmente procedentes? (?:o|os) pedidos?`),
+  improcedente: new RegExp(`${JULGA}improcedentes?\\b(?!,? (?:o|os) pedidos? contrapostos?)|sentenca de improcedencia`),
+  procedente: new RegExp(`${JULGA}procedentes?\\b(?!,? em parte)|sentenca de procedencia`),
+  semMerito: /sem resolucao d[eo] merito|extint[oa] sem|ausencia d[ao] (parte )?autora? .{0,30}audiencia|desistencia|abandono da causa/,
+  extincao: /extint[oa] o processo|julgo extint|extincao do processo/,
+  execucaoSatisfeita: /extint[ao] a execucao|art\.? ?924,? (?:inciso )?ii\b|satisfacao da obrigacao|pagamento integral do debito/,
+  acordo: /homolog\w*\b[^.]{0,120}\b(?:acordo|transacao)\b|(?:acordo|transacao) (?:\w+ )?homologad|descumprimento (?:do |de )?acordo/,
+  liminarDeferida: /(?<!nao )concedida a (?:medida )?liminar|liminar deferida|(?<!in)defiro (?:a |o pedido de )?(?:tutela|liminar|medida liminar)|tutela (?:provisoria )?(?:de urgencia |antecipada )?deferida|(?<!in)deferida a (?:tutela|liminar)|concedo a tutela|tutela de urgencia concedida/,
   liminarIndeferida: /indefiro (a |o pedido de )?(tutela|liminar)|(tutela|liminar)( de urgencia)? indeferida|indeferida a (tutela|liminar)|nao concedida a liminar|indefiro o pedido liminar/,
   recursoParcial: /provid[oa],? em parte|parcialmente provid[oa]|parcial provimento|provimento parcial/,
   recursoNegado: /nao provid[oa]|desprovid[oa]|improvid[oa]|nego provimento|negou provimento|negar provimento|negado provimento|negou-se provimento/,
   recursoProvido: /\bprovid[oa]\b|dou provimento|deu provimento|dar provimento|dado provimento/,
   contextoRecurso: /recurso inominado|turma recursal|recorrente|acordao|relator|decisao monocratica|embargos de declaracao/,
-  arquivado: /arquivad|baixa definitiva/,
+  arquivado: /(?<!des)arquivad|baixa definitiva/,
   sobrestado: /sobrestad|sobrestamento|suspenso por recurso|processo suspenso|suspensao .{0,40}(repetitivo|tema|irdr)|determino a suspensao|suspensao do (julgamento|processamento|feito)|aguarda\w* decisao final .{0,20}tema/,
   emRecurso: /remetidos os autos .{0,30}recurso|remetidos os autos .{0,20}2o grau|remessa dos autos a turma recursal|a colenda turma recursal|recebido o recurso|juntada de peticao de (recurso|contra.?razoes)|recurso inominado|contrarrazoes|contra-razoes/,
   cumprimento: /classe: cumprimento de sentenca|(pedido|requerimento|impugnacao) (de |ao )?cumprimento de sentenca(?! .{0,20}(proceda|arquiv))|cumprimento de sentenca (contra|em face)|penhora online|sisbajud|bacenjud|expedicao de alvara|\bparte exequente\b/,
   sentenciado: /intimacao da sentenca|sentenca de merito|sentenca proferida|publicad[oa] .{0,20}sentenca|embargos de declaracao (nao.acolhidos|acolhidos|rejeitados)/,
 };
 
-/** Sentença de origem citada num acórdão ("contra a sentença que julgou improcedente..."). */
+/**
+ * Resultado de mérito escrito no andamento. Em acórdão, a sentença de origem
+ * vem nomeada ("sentença de procedência", "sentença que julgou improcedente") e
+ * prevalece sobre o verbo solto, que ali é o dispositivo do próprio recurso.
+ */
 function sentencaNoTexto(n) {
   if (RE.acordo.test(n)) return 'acordo';
-  if (RE.parcial.test(n)) return 'parcial';
-  if (RE.improcedente.test(n)) return 'improcedente';
-  if (RE.procedente.test(n)) return 'procedente';
+  if (RE.execucaoSatisfeita.test(n)) return 'procedente'; // cliente recebeu o que foi condenado
+  const origem = n.match(/sentenca (?:de (parcial )?(im)?procedencia|que (?:julgou|julga) (parcialmente |im)?procedentes?)/);
+  if (origem) {
+    if (origem[1] || origem[3] === 'parcialmente ') return 'parcial';
+    return origem[2] || origem[3] === 'im' ? 'improcedente' : 'procedente';
+  }
+  const parcial = RE.parcial.test(n);
+  const improcedente = RE.improcedente.test(n);
+  const procedente = RE.procedente.test(n);
+  // "julgo procedente o pedido X e improcedente o de danos morais" = procedência parcial.
+  if (parcial || (improcedente && procedente)) return 'parcial';
+  if (improcedente) return 'improcedente';
+  if (procedente) return 'procedente';
   if (RE.semMerito.test(n)) return 'sem_merito';
+  if (RE.extincao.test(n)) {
+    if (!/com resolucao d[eo] merito/.test(n)) return 'sem_merito';
+    if (/prescri|decaden/.test(n)) return 'improcedente';
+  }
   return null;
 }
 
@@ -525,10 +563,10 @@ function quemRecorreu(n, linha, sentenca, clienteReu) {
   if (m) {
     const quem = m[1].trim();
     if (primeirosNomes && quem.includes(primeirosNomes)) return 'cliente';
-    if (/banco|bank|s\.?a\b|ltda|financeira|instituto/.test(quem)) return clienteReu ? 'cliente' : 'adversa';
+    if (/\bs\.?\/?a\b|\bltda\b|\bbanco\b|\bbank\b|\bfinanceira\b|\binstituto\b/.test(quem)) return clienteReu ? 'cliente' : 'adversa';
   }
-  if (/parte autora interpos|interposto pela parte autora|recurso da parte autora|irresignad[ao] .{0,40}parte autora/.test(n)) return clienteReu ? 'adversa' : 'cliente';
-  if (/interposto pel[ao] (banco|parte re|parte promovida|reu|promovid)/.test(n)) return clienteReu ? 'cliente' : 'adversa';
+  if (/parte autora interpos|interposto pela parte autora|recurso d[ao] (?:parte )?autora?\b|irresignad[ao] .{0,40}parte autora/.test(n)) return clienteReu ? 'adversa' : 'cliente';
+  if (/interposto pel[ao] (banco|parte re|parte promovida|reu|promovid)|recurso d[oa] (?:reu|re|banco|parte re|promovid)/.test(n)) return clienteReu ? 'cliente' : 'adversa';
   // Sem menção expressa: recorre quem perdeu.
   if (sentenca === 'improcedente') return clienteReu ? 'adversa' : 'cliente';
   if (sentenca === 'procedente') return clienteReu ? 'cliente' : 'adversa';
@@ -553,7 +591,7 @@ export function classificarResultado(linha) {
   const tem = (e) => etiquetas.includes(e);
   const historico = normalizar(linha['Descrição do último histórico']);
   const papel = normalizar(linha['Papel do cliente']);
-  const clienteReu = /^(reu|re|requerido|requerida|reclamado|executado|demandado)$/.test(papel);
+  const clienteReu = /^(reu|re|requerid[oa]|reclamad[oa]|executad[oa]|demandad[oa]|promovid[oa]|embargad[oa]|recorrid[oa]|impetrad[oa])$/.test(papel);
   // A parte contrária figura como executada: o cliente está cobrando uma condenação.
   const adversaExecutada = !clienteReu && /\((executado|executada)\)/i.test(linha['Outros envolvidos'] || '');
   const condenacao = valorMonetario(linha['Valor da condenação']);
@@ -568,7 +606,7 @@ export function classificarResultado(linha) {
   if (etiquetas.some((e) => /parcialmente procedente|procedente em parte/.test(e))) { sentenca = 'parcial'; fonte = 'etiqueta'; }
   else if (tem('improcedente')) { sentenca = 'improcedente'; fonte = 'etiqueta'; }
   else if (tem('procedente')) { sentenca = 'procedente'; fonte = 'etiqueta'; }
-  else if (etiquetas.some((e) => /acordo/.test(e))) { sentenca = 'acordo'; fonte = 'etiqueta'; }
+  else if (tem('acordo') || tem('acordo homologado')) { sentenca = 'acordo'; fonte = 'etiqueta'; }
 
   const doTexto = sentencaNoTexto(historico);
   if (!sentenca && doTexto) { sentenca = doTexto; fonte = 'andamento'; }
@@ -601,9 +639,12 @@ export function classificarResultado(linha) {
 
   if (clienteReu && INVERTER[resultado]) resultado = INVERTER[resultado];
 
+  // Indeferimento primeiro: "indefiro a tutela" contém "defiro a tutela".
   let liminar = null;
-  if (tem('liminar deferida') || RE.liminarDeferida.test(historico)) liminar = 'deferida';
-  else if (etiquetas.some((e) => /liminar indeferida/.test(e)) || RE.liminarIndeferida.test(historico)) liminar = 'indeferida';
+  if (tem('liminar indeferida')) liminar = 'indeferida';
+  else if (tem('liminar deferida')) liminar = 'deferida';
+  else if (RE.liminarIndeferida.test(historico)) liminar = 'indeferida';
+  else if (RE.liminarDeferida.test(historico)) liminar = 'deferida';
 
   return {
     resultado: resultado || 'pendente',
@@ -625,6 +666,7 @@ function dataIso(texto) {
 }
 
 function valorMonetario(texto) {
+  if (/^-?\d+(\.\d+)?$/.test(String(texto ?? '').trim())) return Number(texto); // célula numérica do Excel
   const limpo = String(texto ?? '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
   const n = Number(limpo);
   return Number.isFinite(n) ? n : 0;
@@ -671,6 +713,7 @@ export function classificarLinha(linha, indice, origens) {
     liminar: res.liminar,
     situacao: res.situacao,
     fonteResultado: res.fonteResultado,
+    clienteReu: res.clienteReu,
     distribuicao,
     ultimoAndamento: dataIso(linha['Data do último histórico']),
     valorCausa: valorMonetario(linha['Valor da causa']),
@@ -727,7 +770,7 @@ export function origensAprendidas(registros) {
  */
 export function paraPublicacao(registro) {
   const {
-    cliente, origem, valorCausa, ultimoAndamento, adversaEmpresa, distribuicao, ...resto
+    cliente, origem, valorCausa, ultimoAndamento, adversaEmpresa, distribuicao, clienteReu, ...resto
   } = registro;
   return {
     ...resto,

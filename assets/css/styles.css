@@ -295,7 +295,8 @@ a.btn { text-decoration: none; }
 }
 
 .campo--busca { flex: 1 1 260px; min-width: 200px; }
-.campo--busca input { padding-left: 32px; width: 100%; }
+.campo--busca input,
+.campo--busca input[type="search"] { padding-left: 32px; width: 100%; }
 
 input[type="search"],
 input[type="text"],
@@ -923,6 +924,8 @@ html.autenticado .tela-login { display: none; }
 }
 
 @media (max-width: 620px) {
+  /* No celular o cabeçalho fixo tomaria um terço da tela. */
+  .topo { position: static; }
   .topo__acoes { width: 100%; justify-content: space-between; }
   .sinc { order: 3; width: 100%; }
   .filtros__periodo { width: 100%; }

@@ -137,7 +137,12 @@ export async function lerXlsx(buffer, inflar = inflarNavegador) {
   if (estilos) {
     const personalizados = new Set(
       [...estilos.matchAll(/<numFmt\b[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"/g)]
-        .filter((m) => /[dy]/i.test(m[2]) && !/\[h\]|h:mm/i.test(m[2]))
+        .filter((m) => {
+          // Ignora texto literal ("..."), cores/moedas ([Red], [$R$-416]) e escapes (\x)
+          // antes de procurar d/m/y: "R$ #,##0.00;[Red]..." não é data.
+          const codigo = desescapar(m[2]).replace(/"[^"]*"|\[[^\]]*\]|\\./g, '');
+          return /[dy]/i.test(codigo);
+        })
         .map((m) => Number(m[1])),
     );
     const cellXfs = estilos.match(/<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/);

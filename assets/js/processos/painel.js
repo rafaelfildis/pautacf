@@ -80,17 +80,26 @@ function salvarFiltros() {
   try { sessionStorage.setItem(CHAVE_FILTROS, JSON.stringify(estado.filtros)); } catch { /* sem sessão */ }
 }
 
+/** Preenche o select; devolve false quando o valor filtrado não está entre as opções. */
 function preencherSelect(sel, opcoes, valor, rotuloTodos) {
   sel.replaceChildren(new Option(rotuloTodos, ''));
   for (const [v, rotulo] of opcoes) sel.appendChild(new Option(rotulo, v));
-  sel.value = opcoes.some(([v]) => v === valor) ? valor : '';
+  const existe = opcoes.some(([v]) => v === valor);
+  sel.value = existe ? valor : '';
+  return existe || !valor;
+}
+
+/** UF embutida na chave "Comarca/UF", só quando for uma UF de verdade. */
+function ufDaChave(chave) {
+  const uf = String(chave).split('/').pop();
+  return NOMES_UF[uf] ? uf : '';
 }
 
 /**
  * As opções de cada filtro vêm do recorte que os OUTROS filtros produzem, para
  * nunca oferecer uma combinação vazia (ex.: comarcas de uma UF já escolhida).
  */
-function atualizarOpcoes() {
+function atualizarOpcoes(tentativa = 0) {
   const { registros, referencia } = estado.base;
   const f = estado.filtros;
   const opcoesDe = (campo) => filtrar(registros, f, referencia, { ignorar: [campo] });
@@ -132,11 +141,26 @@ function atualizarOpcoes() {
     b.setAttribute('aria-checked', String(ativo));
   });
   $('#busca').value = f.busca;
+
+  // Filtro salvo que não existe mais (outra base, outro escopo): o select
+  // mostraria "Todas…" com o filtro ainda aplicado. Zera e recalcula.
+  const invalidos = ['uf', 'municipio', 'adversa', 'tese', 'resultado', 'periodo', 'responsavel']
+    .filter((campo) => f[campo] && ![...document.querySelector(SELECTS[campo]).options].some((o) => o.value === f[campo]));
+  if (invalidos.length && tentativa < 3) {
+    invalidos.forEach((campo) => { f[campo] = ''; });
+    salvarFiltros();
+    atualizarOpcoes(tentativa + 1);
+  }
 }
+
+const SELECTS = {
+  uf: '#fUf', municipio: '#fMunicipio', adversa: '#fAdversa', tese: '#fTese',
+  resultado: '#fResultado', periodo: '#fPeriodo', responsavel: '#fResponsavel',
+};
 
 function definirFiltro(campo, valor, { redesenharOpcoes = true } = {}) {
   estado.filtros[campo] = valor;
-  if (campo === 'uf' && valor && estado.filtros.municipio && !estado.filtros.municipio.endsWith(`/${valor}`)) {
+  if (campo === 'uf' && estado.filtros.municipio && (!valor || !estado.filtros.municipio.endsWith(`/${valor}`))) {
     estado.filtros.municipio = '';
   }
   estado.pagina = 1;
@@ -152,7 +176,7 @@ function ligarFiltros() {
   };
   for (const [sel, campo] of Object.entries(mapa)) {
     $(sel).addEventListener('change', (e) => {
-      if (campo === 'municipio' && e.target.value) estado.filtros.uf = e.target.value.split('/').pop();
+      if (campo === 'municipio' && e.target.value) estado.filtros.uf = ufDaChave(e.target.value);
       definirFiltro(campo, e.target.value);
     });
   }
@@ -242,6 +266,7 @@ function renderizarLegendaMapa() {
 }
 
 function renderizarMapa(rankUf, rankComarca) {
+  if (!estado.mapa) return; // mapa indisponível: o resto do painel segue funcionando
   const ufs = new Map(rankUf.grupos.map((g) => [g.chave, g]));
   estado.mapa.atualizar({
     ufs,
@@ -283,7 +308,7 @@ function renderizarInvestir(rankUf, rankComarca) {
     botao.title = `Filtrar ${g.nome}`;
     botao.addEventListener('click', () => {
       if (estado.nivelFoco === 'uf') definirFiltro('uf', g.chave);
-      else { estado.filtros.uf = g.uf; definirFiltro('municipio', g.chave); }
+      else { estado.filtros.uf = ufDaChave(g.chave); definirFiltro('municipio', g.chave); }
     });
     const topo = criar('span', 'investir__topo');
     topo.append(
@@ -315,7 +340,8 @@ function renderizarInvestir(rankUf, rankComarca) {
 
 /* ================= ranking ================= */
 
-const ORDEM_REC = { escalar: 0, testar: 1, cautela: 2, observar: 3 };
+// Ordem de negócio: do mais atrativo ao menos (a ordenação descendente começa por Escalar).
+const ORDEM_REC = { escalar: 3, testar: 2, observar: 1, cautela: 0 };
 
 function ordenar(lista, { campo, asc }) {
   const fator = asc ? 1 : -1;
@@ -333,7 +359,9 @@ function ordenar(lista, { campo, asc }) {
 
 function renderizarRanking(rankUf, rankComarca) {
   const rank = estado.nivelRanking === 'uf' ? rankUf : rankComarca;
-  rank.grupos.forEach((g, i) => { g.posicao = i + 1; });
+  // Núcleo de Justiça 4.0 e processos sem comarca não são cidade: ficam sem posição.
+  let posicao = 0;
+  rank.grupos.forEach((g) => { g.posicao = g.identificada === false ? null : ++posicao; });
   const todas = ordenar(rank.grupos, estado.ordemRanking);
   const linhas = estado.rankingCompleto ? todas : todas.slice(0, LINHAS_RANKING);
   const corpo = $('#corpoRanking');
@@ -344,13 +372,13 @@ function renderizarRanking(rankUf, rankComarca) {
     const tr = document.createElement('tr');
     tr.className = `linha-rec linha-rec--${g.recomendacao}`;
     const td = (texto, classe = '') => { const c = criar('td', classe, texto); tr.appendChild(c); return c; };
-    td(String(g.posicao), 'num');
+    td(g.posicao == null ? '—' : String(g.posicao), 'num');
     const nome = td('', 'col-local');
     const link = criar('button', 'link-celula', estado.nivelRanking === 'uf' ? `${g.nome} (${g.uf})` : `${g.nome} — ${g.uf}`);
     link.type = 'button';
     link.addEventListener('click', () => {
       if (estado.nivelRanking === 'uf') definirFiltro('uf', g.chave);
-      else { estado.filtros.uf = g.uf; definirFiltro('municipio', g.chave); }
+      else { estado.filtros.uf = ufDaChave(g.chave); definirFiltro('municipio', g.chave); }
       $('#mapa').scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
     nome.appendChild(link);
@@ -373,8 +401,12 @@ function renderizarRanking(rankUf, rankComarca) {
     td(g.liminares ? String(g.liminares) : '—', 'num');
     td(String(g.indice), 'num num--forte');
     const rec = td('', '');
-    rec.appendChild(seloRecomendacao(g.recomendacao));
-    rec.appendChild(criar('small', 'confianca', `confiança ${g.confianca}`));
+    if (g.posicao == null) {
+      rec.appendChild(criar('small', 'confianca', 'sem cidade — conta só na UF'));
+    } else {
+      rec.appendChild(seloRecomendacao(g.recomendacao));
+      rec.appendChild(criar('small', 'confianca', `confiança ${g.confianca}`));
+    }
     corpo.appendChild(tr);
   }
   const mais = $('#maisRanking');
@@ -407,8 +439,10 @@ function ligarOrdenacaoRanking() {
 /* ================= gráficos ================= */
 
 function renderizarGraficos(recorte, rankUf) {
-  const porUf = [...rankUf.grupos].sort((a, b) => (b.decididos + b.sem_merito) - (a.decididos + a.sem_merito) || b.total - a.total);
-  porUf.forEach((g) => { g.rotuloCurto = g.uf; });
+  // Agrupado sobre o recorte (inclui o filtro de comarca), como os indicadores.
+  const porUf = [...agrupar(recorte, (r) => r.uf || '—').values()]
+    .map((g) => ({ ...g, uf: g.chave, nome: NOMES_UF[g.chave] || g.chave, rotuloCurto: g.chave, taxa: g.decididos ? g.exitos / g.decididos : null }))
+    .sort((a, b) => (b.decididos + b.sem_merito) - (a.decididos + a.sem_merito) || b.total - a.total);
   barrasResultado($('#graficoResultados'), porUf, { aoClicar: (g) => definirFiltro('uf', g.chave) });
 
   const ufsTopo = [...rankUf.grupos].sort((a, b) => b.total - a.total).slice(0, 6).map((g) => g.chave).filter(Boolean);
@@ -472,6 +506,7 @@ function renderizarProcessos(recorte) {
     th.dataset.ordenar = campo;
     if (estado.ordemProcessos.campo === campo) { th.classList.add('ordenado'); th.dataset.dir = estado.ordemProcessos.asc ? '↑' : '↓'; }
     th.addEventListener('click', () => {
+      estado.pagina = 1;
       estado.ordemProcessos = estado.ordemProcessos.campo === campo
         ? { campo, asc: !estado.ordemProcessos.asc } : { campo, asc: campo !== 'distribuicao' };
       renderizarProcessos(recorte);
@@ -538,8 +573,10 @@ function renderizarProcessos(recorte) {
 
 function baixarCsv(nome, cabecalho, linhas) {
   const escapar = (v) => {
-    const t = String(v ?? '');
-    return /[";\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    let t = String(v ?? '');
+    // Texto que o Excel leria como fórmula (=, +, -, @) ganha apóstrofo; números não.
+    if (/^[=+\-@\t\r]/.test(t) && !/^-?\d+(,\d+)?$/.test(t)) t = `'${t}`;
+    return /[";\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
   };
   // Ponto e vírgula e BOM: o Excel em português abre direto, com acentos.
   const csv = `﻿${[cabecalho, ...linhas].map((l) => l.map(escapar).join(';')).join('\r\n')}`;
@@ -557,8 +594,8 @@ function exportarRanking() {
   const rank = estado.ultimo[estado.nivelRanking === 'uf' ? 'rankUf' : 'rankComarca'];
   baixarCsv(`ranking-${estado.nivelRanking}-${new Date().toISOString().slice(0, 10)}.csv`,
     ['Posição', 'Localidade', 'UF', 'Processos', 'Decisões de mérito', 'Procedentes', 'Parciais', 'Acordos', 'Improcedentes',
-      'Extintos sem mérito', 'Sem decisão', 'Êxito', 'Êxito ajustado', 'Liminares deferidas', 'Índice', 'Recomendação', 'Confiança'],
-    rank.grupos.map((g, i) => [i + 1, g.nome, g.uf, g.total, g.decididos, g.procedente, g.parcial, g.acordo, g.improcedente,
+      'Extintos sem resolução do mérito', 'Resultado não identificado', 'Êxito', 'Êxito ajustado', 'Liminares deferidas', 'Índice', 'Recomendação', 'Confiança'],
+    rank.grupos.map((g) => [g.posicao ?? '', g.nome, g.uf, g.total, g.decididos, g.procedente, g.parcial, g.acordo, g.improcedente,
       g.sem_merito, g.pendente, decimal(g.taxa), decimal(g.exitoAjustado), g.liminares, g.indice,
       RECOMENDACOES[g.recomendacao].rotulo, g.confianca]));
 }
@@ -600,7 +637,7 @@ function renderizar() {
   // o ranking completo — a UF escolhida fica em destaque e as demais seguem
   // visíveis para comparação.
   const f = estado.filtros;
-  const semLocal = filtrar(registros, f, referencia, { ignorar: ['uf', 'municipio'] });
+  const semLocal = filtrar(registros, f, referencia, { ignorar: ['uf', 'municipio', 'resultado', 'busca'] });
   const rankUfBase = ranking(semLocal, 'uf');
   const rankComarcaBase = ranking(semLocal, 'comarca');
   const noRecorte = (grupo, nivel) => (!f.uf || grupo.uf === f.uf) && (nivel === 'uf' || !f.municipio || grupo.chave === f.municipio);
@@ -622,7 +659,11 @@ function descreverBase() {
   ponto.className = 'sinc__ponto sinc__ponto--ok';
   const ref = b.referencia ? ` · ${fmtData(b.referencia)}` : '';
   $('#baseTexto').textContent = `${b.origemBase === 'local' ? 'Base local' : 'Base publicada'} · ${fmtInt.format(b.registros.length)} processos${ref}`;
-  $('#base').title = b.referencia ? `Último andamento registrado na base: ${fmtData(b.referencia)}` : '';
+  $('#base').title = [
+    b.referencia ? `Último andamento registrado no Astrea: ${fmtData(b.referencia)}` : '',
+    b.datajud ? `Histórico do DataJud/CNJ consultado em ${fmtData(b.datajud)}` : '',
+  ].filter(Boolean).join(' · ');
+  if (b.datajud) $('#baseTexto').textContent += ' · CNJ';
   $('#busca').placeholder = b.origemBase === 'local'
     ? 'Buscar cliente, processo, comarca…'
     : 'Buscar nº do processo, comarca, parte adversa…';
@@ -656,7 +697,7 @@ async function importarArquivo(arquivo) {
     }
     progresso.textContent = `Classificando ${linhas.length} linhas…`;
     const [municipios, origens] = await Promise.all([carregarMunicipios(), carregarOrigens()]);
-    const registros = classificarPlanilha(linhas, criarIndiceMunicipios(municipios), origens);
+    const registros = herdarDatajud(classificarPlanilha(linhas, criarIndiceMunicipios(municipios), origens));
     const datas = registros.map((r) => r.ultimoAndamento).filter(Boolean).sort();
     const base = {
       versao: 1,
@@ -665,6 +706,7 @@ async function importarArquivo(arquivo) {
       fonte: arquivo.name,
       total: registros.length,
       registros,
+      datajud: estado.publicada?.datajud || null,
       origemBase: 'local',
     };
     const salvo = gravarBaseLocal(base);
@@ -673,13 +715,35 @@ async function importarArquivo(arquivo) {
     const decididos = registros.filter((r) => r.resultado !== 'pendente').length;
     progresso.textContent = `${registros.length} processos importados · ${decididos} com resultado conhecido · ${semComarca} sem comarca identificável.`
       + (salvo ? '' : ' Atenção: o navegador não permitiu salvar a base; ela vale só até fechar esta aba.');
-    avisar(`Base atualizada: ${registros.length} processos.`);
+    // O aviso flutuante ficaria atrás do fundo do modal: sai quando ele fecha.
+    $('#modalBase').addEventListener('close', () => avisar(`Base atualizada: ${registros.length} processos.`), { once: true });
   } catch (erro) {
     console.error(erro);
     progresso.className = 'base-progresso base-progresso--erro';
     progresso.textContent = erro.message || 'Não foi possível ler a planilha.';
     avisar('Falha ao importar a planilha.', true);
   }
+}
+
+/**
+ * O navegador não consulta o DataJud (a API do CNJ não libera chamadas de
+ * páginas web). A base publicada já traz o histórico consultado pelo script:
+ * a importação local herda esses resultados, casando pelo número do processo.
+ */
+function herdarDatajud(registros) {
+  const publicados = new Map((estado.publicada?.registros || [])
+    .filter((r) => r.numero && r.datajud)
+    .map((r) => [r.numero, r]));
+  if (!publicados.size) return registros;
+  const CAMPOS = ['resultado', 'sentenca', 'dataSentenca', 'recurso', 'dataRecurso', 'liminar', 'situacao', 'transito', 'fonteResultado', 'datajud'];
+  return registros.map((r) => {
+    const p = publicados.get(r.numero);
+    if (!p) return r;
+    const herdado = { ...r };
+    for (const c of CAMPOS) if (p[c] !== undefined) herdado[c] = p[c];
+    if (!herdado.municipio && p.municipio) Object.assign(herdado, { municipio: p.municipio, ibge: p.ibge, lat: p.lat, lon: p.lon });
+    return herdado;
+  });
 }
 
 function ligarBase() {
@@ -719,10 +783,10 @@ function renderizarMetodologia() {
   const lista = $('#listaRecomendacoes');
   lista.replaceChildren();
   const regras = {
-    escalar: 'pelo menos 3 decisões de mérito, êxito bruto ≥ 60% e êxito ajustado acima da média.',
-    cautela: 'pelo menos 2 decisões de mérito e êxito bruto abaixo de 40%.',
-    testar: '3 ou mais processos, ou alguma liminar deferida, ou êxito de pelo menos 50% nas decisões existentes.',
-    observar: 'demais casos — pouco volume e nenhum sinal de resultado.',
+    escalar: 'pelo menos 3 decisões de mérito, êxito bruto de 60% ou mais e êxito ajustado acima da média.',
+    cautela: 'pelo menos 2 decisões de mérito e êxito bruto abaixo de 50% (maioria desfavorável).',
+    testar: '3 ou mais processos e, se já houver decisões, êxito de pelo menos 50%.',
+    observar: 'menos de 3 processos — volume pequeno demais para decidir, mesmo com decisões favoráveis.',
   };
   for (const [chave, rec] of Object.entries(RECOMENDACOES)) {
     const li = document.createElement('li');
@@ -752,6 +816,7 @@ async function iniciar() {
     definirFiltro('uf', '');
   });
   $('#btnCsvRanking').addEventListener('click', exportarRanking);
+  $$('a[href="#metodologia"]').forEach((a) => a.addEventListener('click', () => { $('#metodologia details').open = true; }));
   $('#btnCsvProcessos').addEventListener('click', exportarProcessos);
   $('#btnCopiarCidades').addEventListener('click', copiarCidades);
 
@@ -777,7 +842,10 @@ async function iniciar() {
   } catch (erro) {
     console.error(erro);
   }
-  const local = lerBaseLocal();
+  // A base local tem nomes de clientes: só entra em cena com sessão aberta.
+  let sessao = false;
+  try { sessao = sessionStorage.getItem('pautacf.sessao.v1') === '1'; } catch { /* sem sessão */ }
+  const local = sessao ? lerBaseLocal() : null;
   const base = local || estado.publicada;
   if (!base) {
     $('#basePonto').className = 'sinc__ponto sinc__ponto--erro';
