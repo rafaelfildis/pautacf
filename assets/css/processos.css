@@ -24,6 +24,9 @@
 
 .topo__inicio { display: inline-flex; }
 
+/* Painel geral (escopo "Todos os processos"): mesmo espaçamento do <main>. */
+.painel-geral { display: flex; flex-direction: column; gap: 16px; }
+
 /* ================= Filtros ================= */
 
 .filtros--processos .filtros__refino { flex: 1 1 100%; justify-content: flex-start; }

@@ -18,6 +18,7 @@
 <link rel="alternate icon" href="assets/img/favicon.png">
 <link rel="stylesheet" href="assets/css/styles.css">
 <link rel="stylesheet" href="assets/css/processos.css">
+<link rel="stylesheet" href="assets/css/massa.css">
 </head>
 <body>
 
@@ -88,11 +89,11 @@
   <section class="painel filtros filtros--processos" aria-label="Filtros do painel">
     <div class="filtros__periodo" role="radiogroup" aria-label="Escopo">
       <button class="aba aba--ativa" type="button" role="radio" aria-checked="true" data-escopo="massa"
-              title="Consumidor, bancário e previdenciário, sem pro bono — o que o tráfego pago capta">Demandas de massa</button>
+              title="Agibank: Tarifa de Comunicação Digital e Débito Seguro, por comarca, com procedência e dano moral">Demandas de massa</button>
       <button class="aba" type="button" role="radio" aria-checked="false" data-escopo="todos">Todos os processos</button>
     </div>
 
-    <div class="filtros__refino">
+    <div class="filtros__refino" id="refinoGeral">
       <label class="campo campo--busca" id="campoBusca">
         <span class="campo__icone" aria-hidden="true">⌕</span>
         <input type="search" id="busca" placeholder="Buscar cliente, processo, comarca…" aria-label="Buscar processos">
@@ -107,6 +108,97 @@
       <button class="btn btn--fantasma btn--mini" id="btnLimpar" type="button">Limpar filtros</button>
     </div>
   </section>
+
+  <!-- ---------- Demandas de massa (Agibank: Tarifa de Comunicação Digital e Débito Seguro) ---------- -->
+<section id="painelMassa" aria-label="Demandas de massa" hidden>
+  <header class="m-cabecalho">
+    <h2 class="m-titulo">Demandas de massa · Agibank</h2>
+    <p class="m-cartao__sub" id="m_fonte">Tarifa de Comunicação Digital e Débito Seguro, conferidos no PJe/Projudi.</p>
+  </header>
+<section class="m-filtros" aria-label="Filtros de Demandas de massa">
+    <div class="grupo">
+      <span class="grupo__rotulo" id="m_rotTese">Tese</span>
+      <div class="m-seg" role="group" aria-labelledby="m_rotTese" id="m_fTese">
+        <button type="button" data-v="todas" aria-pressed="true">As duas</button>
+        <button type="button" data-v="tcd" aria-pressed="false">Tarifa de Comunicação Digital</button>
+        <button type="button" data-v="seguro" aria-pressed="false">Débito Seguro</button>
+      </div>
+    </div>
+    <div class="grupo">
+      <span class="grupo__rotulo" id="m_rotUf">Tribunal</span>
+      <div class="m-seg" role="group" aria-labelledby="m_rotUf" id="m_fUf">
+        <button type="button" data-v="todas" aria-pressed="true">TJCE + TJBA</button>
+        <button type="button" data-v="CE" aria-pressed="false">TJCE</button>
+        <button type="button" data-v="BA" aria-pressed="false">TJBA</button>
+      </div>
+    </div>
+    <div class="m-filtros__ativo" id="m_filtroComarca" hidden>
+      <span id="m_filtroComarcaTexto"></span>
+      <button type="button" class="limpar" id="m_btnLimpar">Ver todas as comarcas</button>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Resumo">
+    <article class="kpi"><span class="kpi__valor" id="m_kTotal">–</span><span class="kpi__rotulo">Processos</span><span class="kpi__nota" id="m_kTotalNota"></span></article>
+    <article class="kpi"><span class="kpi__valor" id="m_kMerito">–</span><span class="kpi__rotulo">Sentenças de mérito</span><span class="kpi__nota" id="m_kMeritoNota"></span></article>
+    <article class="kpi"><span class="kpi__valor" id="m_kTaxa">–</span><span class="kpi__rotulo">Taxa de procedência</span><span class="kpi__nota" id="m_kTaxaNota"></span></article>
+    <article class="kpi kpi--destaque"><span class="kpi__valor" id="m_kDm">–</span><span class="kpi__rotulo">Procedências com dano moral</span><span class="kpi__nota" id="m_kDmNota"></span></article>
+    <article class="kpi"><span class="kpi__valor" id="m_kAg">–</span><span class="kpi__rotulo">Aguardando sentença</span><span class="kpi__nota" id="m_kAgNota"></span></article>
+  </section>
+
+  <section class="m-cartao" aria-labelledby="m_tFunil">
+    <div>
+      <h2 id="m_tFunil">Do ajuizamento ao dano moral</h2>
+      <p class="m-cartao__sub">Cada etapa conta sobre a anterior. Extinções sem mérito saem na segunda etapa.</p>
+    </div>
+    <div class="funil" id="m_funil"></div>
+  </section>
+
+  <section class="grade-mapas">
+    <article class="m-cartao" aria-labelledby="m_tMapa">
+      <div>
+        <h2 id="m_tMapa">Onde estão e como estão sendo julgados</h2>
+        <p class="m-cartao__sub">Cada anel é uma comarca: o tamanho acompanha o número de processos e as cores dividem os resultados. A estrela marca comarca com procedência e dano moral. Clique para filtrar.</p>
+      </div>
+      <div class="m-legenda" id="m_legenda"></div>
+      <div class="m-mapas" id="m_mapas"></div>
+    </article>
+
+    <aside class="m-cartao" aria-labelledby="m_tRank">
+      <div>
+        <h2 id="m_tRank">Comarcas por resultado</h2>
+        <p class="m-cartao__sub">Primeiro as que já deram dano moral, depois as com mais procedências.</p>
+      </div>
+      <ol class="ranking" id="m_ranking"></ol>
+    </aside>
+  </section>
+
+  <section class="m-cartao" aria-labelledby="m_tTeses">
+    <div>
+      <h2 id="m_tTeses">As duas teses lado a lado</h2>
+      <p class="m-cartao__sub">Distribuição dos resultados por tribunal. À direita, procedências sobre as sentenças de mérito.</p>
+    </div>
+    <div class="teses" id="m_teses"></div>
+    <p class="nota" id="m_notaTeses"></p>
+  </section>
+
+  <section class="m-cartao" aria-labelledby="m_tTabela">
+    <div>
+      <h2 id="m_tTabela">Processos</h2>
+      <p class="m-cartao__sub" id="m_subTabela"></p>
+    </div>
+    <div class="rolagem">
+      <table>
+        <thead><tr><th>Processo</th><th>Comarca</th><th>Tese</th><th>Resultado</th><th>Dano moral</th><th>Últ. andamento</th><th>Nota da conferência</th></tr></thead>
+        <tbody id="m_corpo"></tbody>
+      </table>
+    </div>
+    <div class="tabela__rodape"><span id="m_contagem"></span><button type="button" class="limpar" id="m_btnMais" hidden>Mostrar todos</button></div>
+  </section>
+</section>
+
+  <!-- ---------- Painel geral: todos os processos ---------- -->
+  <div id="painelGeral" class="painel-geral">
 
   <!-- ---------- Indicadores ---------- -->
   <section class="indicadores indicadores--processos" aria-label="Resumo do recorte">
@@ -339,6 +431,7 @@
       </div>
     </details>
   </section>
+  </div> <!-- /#painelGeral -->
 </main>
 
 <!-- ---------- Modal: base de dados ---------- -->

@@ -126,7 +126,35 @@ export async function lerXlsx(buffer, inflar = inflarNavegador) {
   const caminho = caminhoPrimeiraPlanilha(workbook, rels);
   const planilha = await ler(caminho);
   if (!planilha) throw new Error('Planilha não encontrada dentro do .xlsx.');
+  return comoObjetos(await linhasDaPlanilha(planilha, ler));
+}
 
+/**
+ * Lê todas as abas de um .xlsx. Devolve [{ nome, linhas }], com as linhas
+ * como listas de células (sem tratar cabeçalho), para planilhas que têm título
+ * e totais acima da tabela.
+ */
+export async function lerXlsxAbas(buffer, inflar = inflarNavegador) {
+  const v = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const entradas = entradasZip(v);
+  const ler = async (nome) => (entradas.has(nome) ? lerEntrada(v, entradas.get(nome), inflar) : null);
+  const workbook = (await ler('xl/workbook.xml')) || '';
+  const rels = (await ler('xl/_rels/workbook.xml.rels')) || '';
+  const abas = [];
+  for (const m of workbook.matchAll(/<sheet\b[^>]*>/g)) {
+    const nome = desescapar(m[0].match(/\bname="([^"]*)"/)?.[1] || '');
+    const id = m[0].match(/\br:id="([^"]+)"/)?.[1];
+    const rel = [...rels.matchAll(/<Relationship\b[^>]*>/g)].map((r) => r[0]).find((t) => t.includes(`Id="${id}"`));
+    const destino = rel?.match(/Target="([^"]+)"/)?.[1];
+    if (!destino) continue;
+    const caminho = destino.startsWith('/') ? destino.slice(1) : `xl/${destino.replace(/^\.\//, '')}`;
+    const planilha = await ler(caminho);
+    if (planilha) abas.push({ nome, linhas: await linhasDaPlanilha(planilha, ler) });
+  }
+  return abas;
+}
+
+async function linhasDaPlanilha(planilha, ler) {
   const compartilhadas = [];
   const ss = await ler('xl/sharedStrings.xml');
   if (ss) for (const m of ss.matchAll(/<si>([\s\S]*?)<\/si>/g)) compartilhadas.push(textoDe(m[1]));
@@ -178,7 +206,7 @@ export async function lerXlsx(buffer, inflar = inflarNavegador) {
     }
     linhas.push(celulas);
   }
-  return comoObjetos(linhas);
+  return linhas;
 }
 
 function comoObjetos(linhas) {
