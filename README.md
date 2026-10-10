@@ -216,6 +216,27 @@ pelo botão **Painel de processos**, no canto superior direito da pauta, e publi
   previdenciário, sem pro bono) ou todos os processos, UF, comarca, parte adversa, tese,
   resultado, período de distribuição e responsável.
 
+### Aba Demandas de massa
+
+O botão **Demandas de massa**, no topo do painel, abre a visão de gestão das duas teses
+de massa contra o Agibank — **Tarifa de Comunicação Digital** e **Débito Seguro** — no
+TJCE e no TJBA: indicadores, funil do ajuizamento ao dano moral, mapas do Ceará e da
+Bahia com um anel por comarca (cores por resultado e estrela onde já houve procedência
+com dano moral), comarcas por resultado, as duas teses lado a lado e a tabela com a nota
+da conferência no PJe/Projudi. **Todos os processos** volta ao painel geral.
+
+A base é `assets/data/demandas-massa.json`, gerada da planilha conferida (uma aba por
+tribunal, com as colunas "Procedente/Improcedente", "Com Dano Moral / Sem Dano Moral" e
+"TARIFA DE COMUNICAÇÃO DIGITAL/DÉBITO SEGURO"):
+
+```bash
+node scripts/processos/gerar_demandas_massa.mjs caminho/para/Processos_Agibank_por_tribunal.xlsx
+```
+
+Entram só os processos com uma das duas teses preenchida; o nome do cliente é retirado,
+inclusive do texto da nota. Procedência parcial conta como procedência, e o dano moral é
+mostrado à parte. Outros tribunais aparecem quando a planilha trouxer a tese deles.
+
 ### Base de dados
 
 A base vem da **exportação de processos do Astrea** (planilha `Processos`, .xlsx).
@@ -341,6 +362,10 @@ scripts/processos/gerar_base.mjs  gera a base publicada a partir da planilha
 scripts/processos/gerar_geo.py    gera os dois arquivos geográficos acima
 scripts/processos/sincronizar_datajud.mjs  consulta o histórico no DataJud (CNJ)
 assets/js/processos/movimentos.js  códigos TPU do DataJud → resultado do painel
+assets/js/processos/massa.js      aba Demandas de massa (Agibank, duas teses)
+assets/css/massa.css              estilos da aba, escopados em #painelMassa
+assets/data/demandas-massa.json   base da aba (número do processo, sem nome de cliente)
+scripts/processos/gerar_demandas_massa.mjs  gera a base da aba a partir da planilha conferida
 ```
 
 Sem bibliotecas externas: mapa e gráficos são SVG/HTML desenhados a partir dos dados, e

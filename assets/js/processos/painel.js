@@ -627,7 +627,20 @@ async function copiarCidades() {
 
 /* ================= renderização ================= */
 
+/**
+ * "Demandas de massa" abre a aba das duas teses do Agibank (massa.js);
+ * "Todos os processos" mostra o painel geral com os filtros de refino.
+ */
+function aplicarEscopo() {
+  const massa = estado.filtros.escopo === 'massa';
+  $('#painelMassa').hidden = !massa;
+  $('#painelGeral').hidden = massa;
+  $('#refinoGeral').hidden = massa;
+  if (massa) import('./massa.js').then((m) => m.iniciarMassa()).catch((erro) => console.error(erro));
+}
+
 function renderizar() {
+  aplicarEscopo();
   const { registros, referencia } = estado.base;
   const recorte = filtrar(registros, estado.filtros, referencia);
   const g = resumo(recorte);
@@ -807,6 +820,7 @@ async function iniciar() {
   legendaResultados($('#legendaResultados'));
   renderizarMetodologia();
 
+  aplicarEscopo();
   ligarSegmento('#grupoMetrica', 'metrica', (v) => { estado.metrica = v; renderizar(); });
   ligarSegmento('#grupoNivelFoco', 'nivel', (v) => { estado.nivelFoco = v; renderizar(); });
   ligarSegmento('#grupoNivelRanking', 'nivel', (v) => { estado.nivelRanking = v; renderizar(); });

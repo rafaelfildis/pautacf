@@ -1,0 +1,128 @@
+/* PAUTA CF — Aba "Demandas de massa" do Painel de Processos.
+   Tudo escopado em #painelMassa para não colidir com os componentes do painel geral. */
+
+#painelMassa {
+  
+  --fundo: #071022;
+  --painel: #0d1b34;
+  --painel-2: #10213d;
+  --linha: rgba(168, 176, 189, 0.16);
+  --texto: #eef1f5;
+  --texto-2: #c7cdd8;
+  --mudo: #8f99ab;
+  --ouro: #c9a961;
+  --ouro-claro: #e6cd92;
+  --estado: #17305a;
+  --estado-borda: rgba(201, 169, 97, 0.45);
+  /* resultado */
+  --r-dm: #1fa874;
+  --r-sdm: #c4b54c;
+  --r-imp: #e8655f;
+  --r-ext: #646d82;
+  --r-ag: #2c4268;
+  --fonte: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--texto);
+}
+#painelMassa h2, #painelMassa h3 { margin: 0; text-wrap: balance; }
+#painelMassa button { font: inherit; color: inherit; }
+#painelMassa .m-cabecalho { display: flex; flex-direction: column; gap: 2px; }
+#painelMassa .m-titulo { font-size: 20px; font-weight: 400; letter-spacing: .12em; text-transform: uppercase; color: var(--ouro-claro); }
+#painelMassa :focus-visible { outline: 2px solid var(--ouro-claro); outline-offset: 2px; }
+
+#painelMassa .topo__marca { display: flex; flex-direction: column; gap: 4px; }
+#painelMassa .m-filtros { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; padding: 12px 16px; background: rgba(13, 27, 52, .94); backdrop-filter: blur(6px); border: 1px solid var(--linha); border-radius: 10px; }
+#painelMassa .grupo { display: flex; flex-direction: column; gap: 5px; }
+#painelMassa .grupo__rotulo { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--mudo); font-weight: 700; }
+#painelMassa .m-seg { display: inline-flex; flex-wrap: wrap; background: rgba(7, 16, 34, .7); border: 1px solid var(--linha); border-radius: 8px; padding: 3px; gap: 2px; }
+#painelMassa .m-seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--texto-2); font-weight: 600; font-size: 13px; }
+#painelMassa .m-seg button[aria-pressed="true"] { background: linear-gradient(180deg, var(--ouro), #a8843f); color: var(--fundo); }
+#painelMassa .m-filtros__ativo { margin-left: auto; font-size: 12.5px; color: var(--texto-2); display: flex; gap: 8px; align-items: center; }
+#painelMassa .limpar { border: 1px solid var(--linha); background: transparent; border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--ouro-claro); font-size: 12px; }
+#painelMassa .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+#painelMassa .kpi { background: linear-gradient(180deg, rgba(20, 43, 78, .5), rgba(10, 23, 48, .75)); border: 1px solid var(--linha); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+#painelMassa .kpi__valor { font-size: 30px; font-weight: 300; line-height: 1.1; }
+#painelMassa .kpi__rotulo { font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--mudo); }
+#painelMassa .kpi__nota { font-size: 12px; color: var(--texto-2); }
+#painelMassa .kpi--destaque { border-color: rgba(31, 168, 116, .55); background: linear-gradient(180deg, rgba(31, 168, 116, .16), rgba(10, 23, 48, .75)); }
+#painelMassa .kpi--destaque .kpi__valor { color: #7ee0b4; font-weight: 400; }
+#painelMassa .m-cartao { background: linear-gradient(180deg, rgba(20, 43, 78, .5), rgba(10, 23, 48, .78)); border: 1px solid var(--linha); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+#painelMassa .m-cartao h2 { font-size: 15px; font-weight: 600; color: var(--ouro-claro); letter-spacing: .02em; }
+#painelMassa .m-cartao__sub { margin: 2px 0 0; font-size: 12.5px; color: var(--mudo); max-width: 75ch; }
+#painelMassa .funil { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+#painelMassa .funil__etapa { position: relative; padding: 10px 12px 12px; border-radius: 8px; background: rgba(7, 16, 34, .55); border: 1px solid var(--linha); display: flex; flex-direction: column; gap: 6px; }
+#painelMassa .funil__topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+#painelMassa .funil__n { font-size: 22px; font-weight: 300; font-variant-numeric: tabular-nums; }
+#painelMassa .funil__pct { font-size: 12px; color: var(--mudo); font-variant-numeric: tabular-nums; }
+#painelMassa .funil__nome { font-size: 12.5px; color: var(--texto-2); }
+#painelMassa .funil__trilho { height: 6px; border-radius: 3px; background: rgba(168, 176, 189, .1); overflow: hidden; }
+#painelMassa .funil__barra { height: 100%; border-radius: 3px; background: var(--ouro); }
+#painelMassa .funil__etapa:last-child .funil__barra { background: var(--r-dm); }
+#painelMassa .m-legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--texto-2); }
+#painelMassa .m-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+#painelMassa .chip { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+#painelMassa .chip--ag { background: transparent; box-shadow: inset 0 0 0 2px var(--r-ag); }
+#painelMassa .grade-mapas { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+#painelMassa .m-mapas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+#painelMassa .m-mapa { position: relative; background: #0b1a33; border: 1px solid var(--linha); border-radius: 10px; padding: 10px; min-width: 0; }
+#painelMassa .m-mapa__titulo { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--texto-2); padding: 0 4px 6px; }
+#painelMassa .m-mapa__titulo strong { color: var(--texto); font-size: 14px; letter-spacing: .06em; }
+#painelMassa .m-mapa svg { display: block; width: 100%; height: auto; }
+#painelMassa .estado { fill: var(--estado); stroke: var(--estado-borda); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+#painelMassa .comarca { cursor: pointer; }
+#painelMassa .comarca .alvo { fill: transparent; }
+#painelMassa .comarca .fundo-donut { fill: #0b1a33; }
+#painelMassa .comarca:hover .fundo-donut, #painelMassa .comarca:focus-visible .fundo-donut { fill: #1b3358; }
+#painelMassa .comarca--sel .fundo-donut { fill: #2a4775; }
+#painelMassa .estrela { fill: var(--ouro-claro); stroke: #0b1a33; stroke-width: .6; pointer-events: none; }
+#painelMassa .comarca--apagada { opacity: .18; }
+#painelMassa .nucleo { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: var(--texto-2); border-top: 1px dashed var(--linha); padding-top: 8px; }
+#painelMassa .nucleo button { border: 1px solid var(--linha); background: rgba(7, 16, 34, .6); border-radius: 999px; padding: 3px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; font-size: 12px; }
+#painelMassa .dica { position: absolute; z-index: 4; pointer-events: none; min-width: 190px; max-width: 250px; background: rgba(7, 16, 34, .97); border: 1px solid rgba(201, 169, 97, .45); border-radius: 8px; padding: 9px 11px; font-size: 12.5px; box-shadow: 0 10px 28px rgba(0, 0, 0, .4); }
+#painelMassa .dica b { color: var(--ouro-claro); display: block; margin-bottom: 4px; }
+#painelMassa .dica__linha { display: flex; align-items: center; gap: 7px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+#painelMassa .dica__linha strong { color: var(--texto); min-width: 18px; text-align: right; }
+#painelMassa .ranking { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#painelMassa .ranking button { width: 100%; text-align: left; border: 1px solid var(--linha); background: rgba(7, 16, 34, .45); border-radius: 8px; padding: 9px 11px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
+#painelMassa .ranking button:hover, #painelMassa .ranking button[aria-pressed="true"] { border-color: var(--ouro); background: rgba(43, 77, 128, .22); }
+#painelMassa .ranking__topo { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+#painelMassa .ranking__nome { font-weight: 600; }
+#painelMassa .ranking__nome small { color: var(--mudo); font-weight: 400; margin-left: 4px; }
+#painelMassa .ranking__info { font-size: 12px; color: var(--texto-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#painelMassa .pilha { display: flex; height: 8px; gap: 2px; border-radius: 2px; overflow: hidden; background: rgba(168, 176, 189, .06); }
+#painelMassa .pilha span { display: block; min-width: 3px; }
+#painelMassa .dm-tag { display: inline-flex; gap: 4px; align-items: center; color: #7ee0b4; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; }
+#painelMassa .m-vazio { color: var(--mudo); font-size: 13px; padding: 8px 0; }
+#painelMassa .teses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+#painelMassa .tese__linha { display: grid; grid-template-columns: 60px minmax(0, 1fr) 150px; gap: 10px; align-items: center; font-size: 12.5px; }
+#painelMassa .tese__linha .pilha { height: 18px; border-radius: 3px; }
+#painelMassa .tese__uf { font-weight: 700; letter-spacing: .08em; color: var(--texto-2); }
+#painelMassa .tese__num { color: var(--texto-2); font-variant-numeric: tabular-nums; text-align: right; }
+#painelMassa .tese__num b { color: var(--texto); }
+#painelMassa .nota { font-size: 12.5px; color: var(--texto-2); background: rgba(201, 169, 97, .07); border: 1px solid rgba(201, 169, 97, .25); border-radius: 8px; padding: 9px 12px; }
+#painelMassa .rolagem { overflow-x: auto; }
+#painelMassa table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#painelMassa th { text-align: left; font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; color: var(--ouro); background: var(--painel); padding: 10px; white-space: nowrap; }
+#painelMassa td { padding: 9px 10px; border-top: 1px solid var(--linha); vertical-align: top; color: var(--texto-2); }
+#painelMassa td.m-num { font-family: var(--mono); font-size: 12px; white-space: nowrap; color: var(--texto); }
+#painelMassa .res { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--texto); }
+#painelMassa .obs { max-width: 46ch; font-size: 12px; color: var(--mudo); }
+#painelMassa .tabela__rodape { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; color: var(--mudo); flex-wrap: wrap; }
+@media (max-width: 1050px) {
+  #painelMassa .grade-mapas, #painelMassa .teses { grid-template-columns: 1fr; }
+  #painelMassa .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  #painelMassa .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #painelMassa .funil { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #painelMassa .m-mapas { grid-template-columns: 1fr; }
+  #painelMassa .m-filtros { position: static; }
+  #painelMassa .m-filtros__ativo { margin-left: 0; }
+  #painelMassa .tese__linha { grid-template-columns: 40px minmax(0, 1fr); }
+  #painelMassa .tese__num { grid-column: 2; text-align: left; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  #painelMassa .funil__barra, #painelMassa .pilha span { transition: width .35s ease, flex-grow .35s ease; }
+}
