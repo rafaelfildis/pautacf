@@ -64,8 +64,9 @@
 #painelMassa .m-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 #painelMassa .chip { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 #painelMassa .chip--ag { background: transparent; box-shadow: inset 0 0 0 2px var(--r-ag); }
-#painelMassa .grade-mapas { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
-#painelMassa .m-mapas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/* Com três ou mais tribunais, os mapas ocupam a largura toda e as comarcas vêm logo abaixo, em colunas. */
+#painelMassa .grade-mapas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+#painelMassa .m-mapas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 #painelMassa .m-mapa { position: relative; background: #0b1a33; border: 1px solid var(--linha); border-radius: 10px; padding: 10px; min-width: 0; }
 #painelMassa .m-mapa__titulo { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--texto-2); padding: 0 4px 6px; }
 #painelMassa .m-mapa__titulo strong { color: var(--texto); font-size: 14px; letter-spacing: .06em; }
@@ -84,7 +85,7 @@
 #painelMassa .dica b { color: var(--ouro-claro); display: block; margin-bottom: 4px; }
 #painelMassa .dica__linha { display: flex; align-items: center; gap: 7px; color: var(--texto-2); font-variant-numeric: tabular-nums; }
 #painelMassa .dica__linha strong { color: var(--texto); min-width: 18px; text-align: right; }
-#painelMassa .ranking { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#painelMassa .ranking { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
 #painelMassa .ranking button { width: 100%; text-align: left; border: 1px solid var(--linha); background: rgba(7, 16, 34, .45); border-radius: 8px; padding: 9px 11px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; }
 #painelMassa .ranking button:hover, #painelMassa .ranking button[aria-pressed="true"] { border-color: var(--ouro); background: rgba(43, 77, 128, .22); }
 #painelMassa .ranking__topo { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }

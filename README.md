@@ -219,11 +219,11 @@ pelo botão **Painel de processos**, no canto superior direito da pauta, e publi
 ### Aba Demandas de massa
 
 O botão **Demandas de massa**, no topo do painel, abre a visão de gestão das duas teses
-de massa contra o Agibank — **Tarifa de Comunicação Digital** e **Débito Seguro** — no
-TJCE e no TJBA: indicadores, funil do ajuizamento ao dano moral, mapas do Ceará e da
-Bahia com um anel por comarca (cores por resultado e estrela onde já houve procedência
-com dano moral), comarcas por resultado, as duas teses lado a lado e a tabela com a nota
-da conferência no PJe/Projudi. **Todos os processos** volta ao painel geral.
+de massa contra o Agibank — **Tarifa de Comunicação Digital** e **Débito Seguro** — em
+todos os tribunais que a planilha conferida trouxer (hoje TJCE, TJBA e TJRS): indicadores,
+funil do ajuizamento ao dano moral, um mapa por estado com um anel por comarca (cores por
+resultado e estrela onde já houve procedência com dano moral), comarcas por resultado, as
+duas teses lado a lado por tribunal e a tabela com a nota da conferência. **Todos os processos** volta ao painel geral.
 
 A base é `assets/data/demandas-massa.json`, gerada da planilha conferida (uma aba por
 tribunal, com as colunas "Procedente/Improcedente", "Com Dano Moral / Sem Dano Moral" e

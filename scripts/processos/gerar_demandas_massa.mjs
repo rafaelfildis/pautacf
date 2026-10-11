@@ -46,6 +46,7 @@ function resultado(texto) {
   if (/^parcial/.test(n)) return 'parcial';
   if (/^improcedente/.test(n)) return 'improcedente';
   if (/^procedente/.test(n)) return 'procedente';
+  if (/^extint\w* com (resolucao d[eo] )?merito/.test(n)) return 'improcedente'; // decadência, prescrição
   if (/^extint/.test(n)) return 'extinto';
   return 'aguardando';
 }

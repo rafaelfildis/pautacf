@@ -18,7 +18,11 @@ const ORDEM = ['dm', 'sdm', 'imp', 'ext', 'ag'];
 // Mesmas cores dos tokens --r-* de massa.css (o atributo stroke do SVG não lê var()).
 const COR_ANEL = { dm: '#1fa874', sdm: '#c4b54c', imp: '#e8655f', ext: '#646d82', ag: '#3a5584' };
 const TESE = { tcd: 'Tarifa de Comunicação Digital', seguro: 'Débito Seguro' };
-const UF_NOME = { CE: 'Ceará · TJCE', BA: 'Bahia · TJBA' };
+import { NOMES_UF } from './classificar.js';
+
+const nomeUf = (uf) => `${NOMES_UF[uf] || uf} · TJ${uf}`;
+/** Tribunais presentes na base, do maior volume para o menor. */
+let UFS = [];
 
 function categoria(p) {
   if (p.r === 'procedente' || p.r === 'parcial') return p.dm ? 'dm' : 'sdm';
@@ -164,7 +168,7 @@ function renderMapas() {
   const alvo = $('#m_mapas');
   alvo.replaceChildren();
   const lista = recorte({ semComarca: true });
-  const ufs = estado.uf === 'todas' ? ['CE', 'BA'] : [estado.uf];
+  const ufs = (estado.uf === 'todas' ? UFS : [estado.uf]).filter((uf) => DADOS.mapas[uf]);
   alvo.style.gridTemplateColumns = ufs.length === 1 ? 'minmax(0, 1fr)' : '';
   for (const uf of ufs) {
     const m = DADOS.mapas[uf];
@@ -174,9 +178,9 @@ function renderMapas() {
     const doUf = lista.filter((p) => p.uf === uf);
     const cUf = contar(doUf);
     const titulo = el('div', { class: 'm-mapa__titulo' });
-    titulo.append(el('strong', {}, UF_NOME[uf]), el('span', {}, `${cUf.total} processos · ${cUf.proc} procedentes · ${cUf.dm} com dano moral`));
+    titulo.append(el('strong', {}, nomeUf(uf)), el('span', {}, `${cUf.total} processos · ${cUf.proc} procedentes · ${cUf.dm} com dano moral`));
     caixa.append(titulo);
-    const svg = svgEl('svg', { viewBox: `${bx - pad} ${by - pad} ${bw + 2 * pad} ${bh + 2 * pad}`, role: 'img', 'aria-label': `Mapa de ${UF_NOME[uf]} com os processos por comarca` });
+    const svg = svgEl('svg', { viewBox: `${bx - pad} ${by - pad} ${bw + 2 * pad} ${bh + 2 * pad}`, role: 'img', 'aria-label': `Mapa de ${nomeUf(uf)} com os processos por comarca` });
     svg.append(svgEl('path', { d: m.d, class: 'estado' }));
     const grupos = new Map();
     for (const p of doUf) { if (p.lat == null) continue; const k = chaveComarca(p); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(p); }
@@ -259,7 +263,7 @@ function renderTeses() {
   for (const t of ['tcd', 'seguro']) {
     const bloco = el('div', { class: 'm-cartao', style: `padding: 12px 14px; background: rgba(7,16,34,.4); ${estado.tese !== 'todas' && estado.tese !== t ? 'opacity:.45' : ''}` });
     bloco.append(el('h3', { style: 'font-size:13.5px;color:var(--texto)' }, TESE[t]));
-    for (const uf of ['CE', 'BA']) {
+    for (const uf of UFS) {
       const c = contar(base.filter((p) => p.t === t && p.uf === uf));
       const linha = el('div', { class: 'tese__linha' });
       const p = el('span', { class: 'pilha' });
@@ -320,6 +324,15 @@ function render() {
 }
 
 
+/** Um botão por tribunal presente na base, além de "Todos os tribunais". */
+function montarFiltroTribunal() {
+  const grupo = $('#m_fUf');
+  grupo.replaceChildren();
+  for (const [v, rotulo] of [['todas', 'Todos os tribunais'], ...UFS.map((uf) => [uf, `TJ${uf}`])]) {
+    grupo.append(el('button', { type: 'button', 'data-v': v, 'aria-pressed': String(v === estado.uf) }, rotulo));
+  }
+}
+
 function bboxDoCaminho(d) {
   const nums = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
   const xs = nums.filter((_, i) => i % 2 === 0);
@@ -340,13 +353,19 @@ export async function iniciarMassa() {
       fetch('assets/data/brasil-uf.json').then((r) => r.json()),
     ]);
     const mapas = {};
-    for (const u of geo.ufs) if (u.uf === 'CE' || u.uf === 'BA') mapas[u.uf] = { d: u.d, bbox: bboxDoCaminho(u.d) };
+    const volume = {};
+    for (const p of base.processos) if (p.uf) volume[p.uf] = (volume[p.uf] || 0) + 1;
+    UFS = Object.keys(volume).sort((a, b) => volume[b] - volume[a]);
+    for (const u of geo.ufs) if (volume[u.uf]) mapas[u.uf] = { d: u.d, bbox: bboxDoCaminho(u.d) };
     DADOS = { proj: geo.projecao, mapas, processos: base.processos };
+    montarFiltroTribunal();
     BASE = DADOS.processos.map((p) => ({ ...p, c: categoria(p) }));
     const semTese = Object.values(base.semTese || {}).reduce((a, b) => a + b, 0);
     FORA = semTese;
     const ref = base.referencia ? base.referencia.split('-').reverse().join('/') : null;
-    $('#m_fonte').textContent = `Tarifa de Comunicação Digital e Débito Seguro no TJCE e no TJBA, conferidos no PJe/Projudi${ref ? ` até ${ref}` : ''}.`;
+    const lista = UFS.map((uf) => `TJ${uf}`);
+    const tribunais = lista.length > 1 ? `${lista.slice(0, -1).join(', ')} e ${lista.at(-1)}` : lista[0];
+    $('#m_fonte').textContent = `Tarifa de Comunicação Digital e Débito Seguro no ${tribunais}, conferidos nos sistemas dos tribunais${ref ? ` até ${ref}` : ''}.`;
   } catch (erro) {
     console.error(erro);
     $('#m_fonte').textContent = 'Não foi possível carregar a base de Demandas de massa.';
