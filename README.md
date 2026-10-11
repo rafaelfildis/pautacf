@@ -318,6 +318,25 @@ node scripts/processos/gerar_base.mjs caminho/para/Processos.xlsx --datajud data
 - Fonte a citar (Portaria CNJ 374/2026): DataJud — Base Nacional de Dados do Poder
   Judiciário, Conselho Nacional de Justiça.
 
+### Conferência nos autos e dano moral
+
+A planilha da carteira organizada por tribunal (aba por tribunal, com as colunas
+"Procedente/Improcedente", "Com Dano Moral / Sem Dano Moral" e "Tese") complementa a base:
+
+```bash
+node scripts/processos/gerar_base.mjs caminho/para/Processos.xlsx \
+  --datajud data/saida/datajud.json --conferencia caminho/para/Carteira_por_tribunal.xlsx
+```
+
+- A tese da planilha prevalece sobre a classificação automática (inclui Tarifa de
+  Comunicação Digital, Débito Seguro e Negativação indevida).
+- O dano moral é publicado só como sim/não (`danoMoral`), sem valor; aparece no indicador
+  de êxito e como selo na tabela.
+- O resultado só é substituído nas linhas conferidas nos autos (Observações iniciadas por
+  "PJe (dd/mm/aaaa)", "eproc (...)" ou "Projudi (...)"), salvo acórdão registrado no CNJ
+  que tenha reformado a sentença.
+- Registros do tipo "Caso" ficam fora da base.
+
 ### Índice de prioridade e recomendação
 
 Com poucas decisões por comarca, a taxa bruta engana (1 procedente em 1 decisão vira

@@ -221,6 +221,7 @@ function renderizarIndicadores(recorte, g) {
   $('#kpiTaxa').textContent = pct(g.taxa);
   $('#kpiTaxaNota').textContent = g.decididos
     ? `${g.procedente} proc. · ${g.parcial} parc. · ${g.acordo} acordo${g.acordo === 1 ? '' : 's'} · ${g.improcedente} improc.`
+      + (g.danoMoral ? ` · ${g.danoMoral} c/ dano moral` : '')
     : 'sem decisões no recorte';
   $('#kpiLiminares').textContent = fmtInt.format(g.liminares);
   $('#kpiLiminaresNota').textContent = g.total ? `${pct(g.liminares / g.total)} dos processos` : '';
@@ -491,11 +492,19 @@ function textoCelula(r, campo) {
     case 'municipio': return r.municipio || (r.unidade === 'Núcleo de Justiça 4.0' ? 'Núcleo 4.0 (estadual)' : '—');
     case 'tese': return TESES[r.tese] || r.tese;
     case 'situacao': return SITUACOES[r.situacao] || r.situacao;
-    case 'resultado': return RESULTADOS[r.resultado];
+    case 'resultado': return RESULTADOS[r.resultado] + (r.danoMoral === true ? ' · dano moral' : '');
     case 'liminar': return r.liminar === 'deferida' ? 'Deferida' : r.liminar === 'indeferida' ? 'Indeferida' : '—';
     default: return r[campo] ?? '—';
   }
 }
+
+const FONTES_RESULTADO = {
+  autos: 'conferência nos autos (PJe, eproc ou Projudi)',
+  datajud: 'histórico oficial do CNJ (DataJud)',
+  etiqueta: 'etiqueta do escritório',
+  cumprimento: 'cliente executando a sentença',
+  andamento: 'texto do último andamento',
+};
 
 function renderizarProcessos(recorte) {
   const colunas = colunasProcessos();
@@ -535,8 +544,9 @@ function renderizarProcessos(recorte) {
       const td = criar('td', c === 'distribuicao' ? 'col-data' : c === 'numero' ? 'col-processo' : '');
       if (c === 'resultado') {
         const selo = criar('span', `selo-resultado selo-resultado--${r.resultado}`, RESULTADOS[r.resultado]);
-        if (r.fonteResultado) selo.title = `Fonte: ${r.fonteResultado === 'etiqueta' ? 'etiqueta do escritório' : r.fonteResultado === 'cumprimento' ? 'cliente executando a sentença' : 'texto do último andamento'}`;
+        if (r.fonteResultado) selo.title = `Fonte: ${FONTES_RESULTADO[r.fonteResultado] || 'texto do último andamento'}`;
         td.appendChild(selo);
+        if (r.danoMoral === true) td.appendChild(criar('span', 'selo-dano', 'dano moral'));
       } else td.textContent = textoCelula(r, c);
       tr.appendChild(td);
     }
@@ -745,10 +755,10 @@ async function importarArquivo(arquivo) {
  */
 function herdarDatajud(registros) {
   const publicados = new Map((estado.publicada?.registros || [])
-    .filter((r) => r.numero && r.datajud)
+    .filter((r) => r.numero && (r.datajud || r.fonteResultado === 'autos' || r.danoMoral != null))
     .map((r) => [r.numero, r]));
   if (!publicados.size) return registros;
-  const CAMPOS = ['resultado', 'sentenca', 'dataSentenca', 'recurso', 'dataRecurso', 'liminar', 'situacao', 'transito', 'fonteResultado', 'datajud'];
+  const CAMPOS = ['resultado', 'sentenca', 'dataSentenca', 'recurso', 'dataRecurso', 'liminar', 'situacao', 'transito', 'fonteResultado', 'datajud', 'tese', 'danoMoral'];
   return registros.map((r) => {
     const p = publicados.get(r.numero);
     if (!p) return r;

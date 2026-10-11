@@ -72,12 +72,15 @@ export const EXITO = new Set(['procedente', 'parcial', 'acordo']);
 export const DECIDIDO = new Set(['procedente', 'parcial', 'acordo', 'improcedente']);
 
 export const TESES = {
+  tarifa_comunicacao_digital: 'Tarifa de Comunicação Digital',
+  debito_seguro: 'Débito Seguro',
   tarifa_bancaria: 'Tarifa bancária',
   emprestimo_consignado: 'Empréstimo consignado',
   cartao_rmc_rcc: 'Cartão consignado (RMC/RCC)',
   seguro_nao_contratado: 'Seguro não contratado',
   credito_pessoal_cdc: 'Crédito pessoal / CDC',
   fraude_bancaria: 'Fraude bancária',
+  negativacao_indevida: 'Negativação indevida',
   bancario_outros: 'Bancário — tese não cadastrada',
   previdenciario: 'Previdenciário (INSS)',
   consumidor_outros: 'Consumidor — outros',
@@ -89,7 +92,7 @@ export const TESES = {
 
 /** Teses de captação em massa — o escopo padrão do painel de tráfego. */
 export const TESES_MASSA = new Set([
-  'tarifa_bancaria', 'emprestimo_consignado', 'cartao_rmc_rcc', 'seguro_nao_contratado',
+  'tarifa_comunicacao_digital', 'debito_seguro', 'negativacao_indevida', 'tarifa_bancaria', 'emprestimo_consignado', 'cartao_rmc_rcc', 'seguro_nao_contratado',
   'credito_pessoal_cdc', 'fraude_bancaria', 'bancario_outros', 'previdenciario', 'consumidor_outros',
 ]);
 
