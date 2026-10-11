@@ -307,6 +307,17 @@
 .selo-resultado--acordo::before { background: var(--res-acordo); opacity: 1; }
 .selo-resultado--sem_merito::before { background: var(--res-sem-merito); opacity: 1; }
 .selo-resultado--improcedente::before { background: var(--res-improcedente); opacity: 1; }
+.selo-dano {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--res-procedente);
+  border: 1px solid currentColor;
+}
 .selo-resultado--procedente, .selo-resultado--parcial, .selo-resultado--acordo,
 .selo-resultado--improcedente, .selo-resultado--sem_merito { color: var(--prata-100); }
 

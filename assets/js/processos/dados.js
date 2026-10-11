@@ -134,7 +134,7 @@ function novoGrupo(chave) {
   return {
     chave, total: 0, decididos: 0, exitos: 0,
     procedente: 0, parcial: 0, acordo: 0, improcedente: 0, sem_merito: 0, pendente: 0,
-    liminares: 0, sobrestados: 0, emRecurso: 0,
+    liminares: 0, sobrestados: 0, emRecurso: 0, danoMoral: 0,
   };
 }
 
@@ -144,6 +144,7 @@ function somar(g, r) {
   if (DECIDIDO.has(r.resultado)) g.decididos += 1;
   if (EXITO.has(r.resultado)) g.exitos += 1;
   if (r.liminar === 'deferida') g.liminares += 1;
+  if (r.danoMoral === true) g.danoMoral += 1;
   if (r.situacao === 'sobrestado') g.sobrestados += 1;
   if (r.situacao === 'em_recurso') g.emRecurso += 1;
 }
