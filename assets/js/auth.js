@@ -61,8 +61,16 @@ function ligar() {
   const campoSenha = $('#loginSenha');
   const erro = $('#loginErro');
   const btnSair = $('#btnSair');
+  const btnVerSenha = $('#btnVerSenha');
 
   if (sessaoValida()) abrirApp();
+
+  btnVerSenha?.addEventListener('click', () => {
+    const visivel = campoSenha.type === 'text';
+    campoSenha.type = visivel ? 'password' : 'text';
+    btnVerSenha.setAttribute('aria-pressed', String(!visivel));
+    btnVerSenha.setAttribute('aria-label', visivel ? 'Mostrar senha' : 'Ocultar senha');
+  });
 
   form.addEventListener('submit', (evento) => {
     evento.preventDefault();

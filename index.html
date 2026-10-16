@@ -37,8 +37,12 @@
 
       <label class="bloco">
         <span class="bloco__titulo">Senha de acesso</span>
-        <input type="password" id="loginSenha" name="password" autocomplete="current-password"
-               placeholder="••••••••" required>
+        <div class="tela-login__campo-senha">
+          <input type="password" id="loginSenha" name="password" autocomplete="current-password"
+                 placeholder="••••••••" required>
+          <button type="button" class="tela-login__ver-senha" id="btnVerSenha"
+                  aria-label="Mostrar senha" aria-pressed="false">👁</button>
+        </div>
       </label>
 
       <p class="tela-login__erro" id="loginErro" role="alert" hidden>Login ou senha incorretos.</p>
