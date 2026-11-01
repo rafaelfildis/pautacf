@@ -11,6 +11,7 @@
 import {
   RESULTADOS_SENTENCA, classificarSentenca, contemPalavras, normalizarTexto, pareceAcordao, pareceSentenca, textoLimpo,
 } from './sentenca.js';
+import { seloDano, seloContagem } from './selo-dano.js';
 
 const $ = (sel) => document.querySelector(sel);
 const fmtInt = new Intl.NumberFormat('pt-BR');
@@ -380,11 +381,11 @@ function renderizarOrgaos(lista) {
   const orgaos = agrupar(lista, (r) => `${r.orgao}|${r.tribunal}`).filter((g) => g.merito)
     .sort((a, b) => b.merito - a.merito || b.procedentes - a.procedentes).slice(0, 60);
   $('#rTabelaOrgaos').replaceChildren(
-    el('thead', {}, el('tr', {}, ['Vara / juizado', 'Tribunal', 'Mérito', 'Proc.', 'Improc.', 'Taxa', 'Dano moral'].map((c, i) => el('th', { class: i > 1 ? 'num' : null, scope: 'col' }, c)))),
+    el('thead', {}, el('tr', {}, ['Vara / juizado', 'Tribunal', 'Mérito', 'Proc.', 'Improc.', 'Taxa', 'Dano moral'].map((c, i) => el('th', { class: i === 6 ? 'col-dm' : i > 1 ? 'num' : null, scope: 'col' }, c)))),
     el('tbody', {}, orgaos.length ? orgaos.map((g) => {
       const [orgao, tribunal] = g.chave.split('|');
       return el('tr', {}, el('td', {}, orgao), el('td', {}, tribunal), el('td', { class: 'num' }, g.merito), el('td', { class: 'num' }, g.procedentes),
-        el('td', { class: 'num' }, g.improcedente), el('td', { class: 'num' }, pct(g.procedentes, g.merito)), el('td', { class: 'num' }, g.dm || '—'));
+        el('td', { class: 'num' }, g.improcedente), el('td', { class: 'num' }, pct(g.procedentes, g.merito)), el('td', { class: 'col-dm' }, seloContagem(g.dm)));
     }) : el('tr', {}, el('td', { colspan: '7', class: 'vazio' }, 'Nenhuma sentença de mérito encontrada até agora.'))),
   );
 }
@@ -403,6 +404,14 @@ function textoDano(r) {
   if (r.danoMoral === true) return r.valor ? `Sim · ${fmtRealExato.format(r.valor)}` : 'Sim (valor não identificado)';
   if (r.danoMoral === false) return 'Não';
   return 'Não identificado';
+}
+
+function celulaDano(r) {
+  if (r.resultado === 'improcedente') return seloDano('nao', 'Não', 'Pedido julgado improcedente');
+  if (!['procedente', 'parcial'].includes(r.resultado)) return '—';
+  if (r.danoMoral === true) return seloDano('sim', r.valor ? fmtRealExato.format(r.valor) : 'Sim', 'Condenação em dano moral');
+  if (r.danoMoral === false) return seloDano('nao', 'Não', 'Dano moral negado');
+  return seloDano('indef', 'Não identificado', 'O dispositivo não deixa claro: confira o trecho');
 }
 
 function renderizarDecisoes(lista) {
@@ -426,7 +435,7 @@ function renderizarDecisoes(lista) {
       el('span', {}, el('span', { class: 'decisao__orgao' }, r.orgao), el('span', { class: 'decisao__processo' }, r.processo),
         r.passivo ? el('span', { class: 'decisao__processo' }, `Polo passivo: ${r.passivo}`) : null),
       el('span', {}, el('span', { class: `selo-resultado selo-resultado--${classeSelo}` }, resultado)),
-      el('span', { class: 'decisao__dm' }, textoDano(r)),
+      el('span', { class: 'decisao__dm' }, celulaDano(r)),
       el('details', { class: 'decisao__trecho' }, el('summary', {}, 'Ver dispositivo'), el('p', {}, r.trecho || '—'),
         el('span', { class: 'decisao__links' },
           r.link ? el('a', { class: 'link-discreto', href: r.link, target: '_blank', rel: 'noopener noreferrer' }, 'Inteiro teor no tribunal') : null,

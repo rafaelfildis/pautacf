@@ -9,6 +9,7 @@
 
 import { TESES, TESES_MASSA, RESULTADOS } from '../processos/classificar.js';
 import { carregarBasePublicada } from '../processos/dados.js';
+import { seloDano, seloContagem } from './selo-dano.js';
 
 const $ = (sel) => document.querySelector(sel);
 const fmtInt = new Intl.NumberFormat('pt-BR');
@@ -293,11 +294,11 @@ function renderizarDetalhe() {
   const semMerito = todasComarcas.filter((c) => !c.merito);
   $('#tabelaComarcas').replaceChildren(
     el('thead', {}, el('tr', {}, ['Comarca', 'Processos', 'Mérito', 'Proc.', 'Improc.', 'Taxa', 'Dano moral']
-      .map((t, i) => el('th', { class: i ? 'num' : null, scope: 'col' }, t)))),
+      .map((t, i) => el('th', { class: i === 6 ? 'col-dm' : i ? 'num' : null, scope: 'col' }, t)))),
     el('tbody', {}, comarcas.map((c) => el('tr', {},
       el('td', {}, c.chave), el('td', { class: 'num' }, c.total), el('td', { class: 'num' }, c.merito),
       el('td', { class: 'num' }, c.procedentes), el('td', { class: 'num' }, c.improcedente),
-      el('td', { class: 'num' }, pct(c.procedentes, c.merito)), el('td', { class: 'num' }, c.dm || '—')))),
+      el('td', { class: 'num' }, pct(c.procedentes, c.merito)), el('td', { class: 'col-dm' }, seloContagem(c.dm))))),
   );
   const rodape = $('#rodapeComarcas');
   rodape.textContent = semMerito.length
@@ -314,7 +315,8 @@ function renderizarDetalhe() {
       el('td', {}, r.municipio ? `${r.municipio} — ${r.uf}` : (r.unidade || '—')),
       el('td', {}, r.adversa || '—'),
       el('td', {}, el('span', { class: `selo-resultado selo-resultado--${r.resultado}` }, RESULTADOS[r.resultado])),
-      el('td', {}, r.resultado === 'improcedente' ? '—' : r.danoMoral === true ? 'Com dano moral' : r.danoMoral === false ? 'Sem dano moral' : 'A conferir')))
+      el('td', {}, r.resultado === 'improcedente' ? seloDano('nao', 'Não', 'Pedido julgado improcedente')
+        : r.danoMoral === true ? seloDano('sim', 'Sim') : r.danoMoral === false ? seloDano('nao', 'Não') : seloDano('indef', 'A conferir'))))
       : el('tr', {}, el('td', { colspan: '5', class: 'vazio' }, 'Nenhuma sentença de mérito nesta tese.'))),
   );
 }
