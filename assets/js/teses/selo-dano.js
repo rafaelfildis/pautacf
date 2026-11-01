@@ -17,9 +17,9 @@ export function seloDano(estado, texto, titulo) {
   return s;
 }
 
-/** Selo para contagens (tabelas por vara/comarca): ✓ com a quantidade ou ✕. */
+/** Selo para contagens (tabelas por vara/comarca): ✓ Sim (com a quantidade, se mais de uma) ou ✕ Não. */
 export function seloContagem(n) {
   return n > 0
-    ? seloDano('sim', String(n), `${n} sentença${n === 1 ? '' : 's'} com dano moral`)
+    ? seloDano('sim', n === 1 ? 'Sim' : `Sim (${n})`, `${n} sentença${n === 1 ? '' : 's'} com dano moral`)
     : seloDano('nao', 'Não', 'Nenhuma sentença com dano moral');
 }
