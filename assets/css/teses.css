@@ -233,3 +233,32 @@
   .decisao--cabecalho { display: none; }
   .pesquisa__config { margin-left: 0; }
 }
+
+/* ---------- Selo de dano moral ---------- */
+.col-dm { text-align: left; white-space: nowrap; }
+.tabela th.col-dm { text-align: left; }
+.selo-dano-moral {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--prata-100);
+  white-space: nowrap;
+}
+.selo-dano-moral__icone {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+}
+.selo-dano-moral--sim .selo-dano-moral__icone { background: var(--t-dm); box-shadow: 0 0 0 3px rgba(31, 168, 116, 0.18); }
+.selo-dano-moral--nao .selo-dano-moral__icone { background: var(--t-imp); box-shadow: 0 0 0 3px rgba(232, 101, 95, 0.16); }
+.selo-dano-moral--nao { color: var(--prata-300); font-weight: 500; }
+.selo-dano-moral--indef .selo-dano-moral__icone { background: rgba(168, 176, 189, 0.35); color: var(--marinho-900); }
+.selo-dano-moral--indef { color: var(--prata-400); font-weight: 500; }
