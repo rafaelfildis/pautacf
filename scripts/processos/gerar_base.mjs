@@ -1,7 +1,8 @@
 /* Gera a base publicada do Painel de Processos a partir da exportação do Astrea.
  *
  *   node scripts/processos/gerar_base.mjs <Processos.xlsx> [--datajud data/saida/datajud.json]
- *        [--conferencia <Carteira_por_tribunal.xlsx>] [--json-bruto <saida.json>]
+ *        [--conferencia <Carteira_por_tribunal.xlsx>] [--herdar <processos-base.json anterior>]
+ *        [--massa assets/data/demandas-massa.json] [--json-bruto <saida.json>]
  *
  * Usa exatamente o mesmo classificador da importação feita no navegador
  * (assets/js/processos/classificar.js) e grava assets/data/processos-base.json.
@@ -14,6 +15,15 @@
  * Moral" e "Tese"). Dela vêm a tese refinada e o dano moral de cada processo;
  * o resultado só é substituído quando a linha foi conferida nos autos
  * (Observações iniciadas por "PJe (dd/mm/aaaa)", "eproc (...)" ou "Projudi (...)").
+ *
+ * --herdar reaproveita, pelo número do processo, o que a base anterior já tinha
+ * de conferência: a tese refinada, o dano moral e o resultado conferido nos
+ * autos. Serve para atualizar a base com uma exportação nova sem refazer a
+ * conferência.
+ *
+ * --massa aplica por último a base da aba Demandas de massa (a mais recente
+ * conferência das teses Tarifa de Comunicação Digital e Débito Seguro):
+ * tese, resultado da sentença e dano moral.
  *
  * Também atualiza assets/data/origens-cnj.json, o dicionário público de
  * unidades de origem (J.TR.OOOO → município), aprendido dos processos em que a
@@ -122,6 +132,47 @@ if (iConf >= 0 && opcoes[iConf + 1]) {
   });
 }
 
+// Conferência herdada da base publicada anterior.
+const iHerdar = opcoes.indexOf('--herdar');
+let herdados = 0;
+if (iHerdar >= 0 && opcoes[iHerdar + 1]) {
+  const anterior = new Map(JSON.parse(readFileSync(opcoes[iHerdar + 1], 'utf-8')).registros.map((r) => [r.numero, r]));
+  registros = registros.map((r) => {
+    const a = anterior.get(r.numero);
+    if (!a) return r;
+    herdados += 1;
+    const novo = { ...r, tese: a.tese || r.tese };
+    if (a.danoMoral !== undefined) novo.danoMoral = a.danoMoral;
+    const reformada = r.fonteResultado === 'datajud' && ['provido', 'parcial'].includes(r.recurso) && !a.recurso;
+    if (a.fonteResultado === 'autos' && !reformada) {
+      Object.assign(novo, { resultado: a.resultado, fonteResultado: 'autos' });
+      if (novo.situacao === 'em_andamento' && a.resultado !== 'pendente') novo.situacao = 'sentenciado';
+    }
+    return novo;
+  });
+}
+
+// Base da aba Demandas de massa: a conferência mais recente das duas teses.
+const iMassa = opcoes.indexOf('--massa');
+let daMassa = 0;
+if (iMassa >= 0 && opcoes[iMassa + 1]) {
+  const massa = new Map(JSON.parse(readFileSync(opcoes[iMassa + 1], 'utf-8')).processos.map((p) => [p.n, p]));
+  const TESE = { tcd: 'tarifa_comunicacao_digital', seguro: 'debito_seguro' };
+  const RESULTADO = { procedente: 'procedente', parcial: 'parcial', improcedente: 'improcedente', extinto: 'sem_merito', acordo: 'acordo', aguardando: 'pendente' };
+  registros = registros.map((r) => {
+    const p = massa.get(r.numero);
+    if (!p) return r;
+    daMassa += 1;
+    const resultado = RESULTADO[p.r] || r.resultado;
+    const novo = { ...r, tese: TESE[p.t] || r.tese, danoMoral: p.dm ?? null };
+    if (resultado !== r.resultado) {
+      Object.assign(novo, { resultado, fonteResultado: resultado === 'pendente' ? null : 'conferencia' });
+      if (novo.situacao === 'em_andamento' && resultado !== 'pendente') novo.situacao = 'sentenciado';
+    }
+    return novo;
+  });
+}
+
 // Dicionário de origens: só entra o que veio do texto do foro/vara, sem conflito.
 const aprendidas = { ...origens };
 for (const [origem, r] of origensAprendidas(registros)) aprendidas[origem] ??= r.municipio;
@@ -139,7 +190,9 @@ const base = {
   fonte: (datajudEm
     ? `Exportação de processos do Astrea + histórico do DataJud/CNJ (consultado em ${datajudEm})`
     : 'Exportação de processos do Astrea — sem nome de cliente')
-    + (conferidos ? ` + conferência nos autos (${conferidos} processos)` : ''),
+    + (conferidos ? ` + conferência nos autos (${conferidos} processos)` : '')
+    + (herdados ? ` + conferência herdada da base anterior (${herdados} processos)` : '')
+    + (daMassa ? ` + Demandas de massa (${daMassa} processos)` : ''),
   datajud: datajudEm,
   total: registros.length,
   registros: registros.map(paraPublicacao),
@@ -155,6 +208,7 @@ const semLocal = registros.filter((r) => !r.municipio);
 const contagem = (campo) => Object.entries(registros.reduce((acc, r) => ({ ...acc, [r[campo]]: (acc[r[campo]] || 0) + 1 }), {}))
   .sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(' · ');
 console.log(`${registros.length} processos classificados${conferidos ? ` · ${conferidos} com resultado conferido nos autos` : ''}.`);
+if (herdados || daMassa) console.log(`Herdados da base anterior: ${herdados} · aplicados da aba Demandas de massa: ${daMassa}`);
 console.log(`Tese — ${contagem('tese')}`);
 console.log(`Dano moral — ${contagem('danoMoral')}`);
 console.log(`Resultado — ${contagem('resultado')}`);
