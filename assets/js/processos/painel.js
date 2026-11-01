@@ -500,6 +500,7 @@ function textoCelula(r, campo) {
 
 const FONTES_RESULTADO = {
   autos: 'conferência nos autos (PJe, eproc ou Projudi)',
+  conferencia: 'conferência do escritório (autos, DJEN ou etiquetas)',
   datajud: 'histórico oficial do CNJ (DataJud)',
   etiqueta: 'etiqueta do escritório',
   cumprimento: 'cliente executando a sentença',
@@ -755,7 +756,7 @@ async function importarArquivo(arquivo) {
  */
 function herdarDatajud(registros) {
   const publicados = new Map((estado.publicada?.registros || [])
-    .filter((r) => r.numero && (r.datajud || r.fonteResultado === 'autos' || r.danoMoral != null))
+    .filter((r) => r.numero && (r.datajud || ['autos', 'conferencia'].includes(r.fonteResultado) || r.danoMoral != null))
     .map((r) => [r.numero, r]));
   if (!publicados.size) return registros;
   const CAMPOS = ['resultado', 'sentenca', 'dataSentenca', 'recurso', 'dataRecurso', 'liminar', 'situacao', 'transito', 'fonteResultado', 'datajud', 'tese', 'danoMoral'];

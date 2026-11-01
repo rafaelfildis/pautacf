@@ -1,0 +1,142 @@
+/* PAUTA CF — Análise de teses.
+   Complementa styles.css e processos.css. As cores de resultado são as mesmas
+   da aba Demandas de massa: verde = procedente com dano moral, dourado =
+   procedente sem dano moral, vermelho = improcedente. */
+
+:root {
+  --t-dm: #1fa874;
+  --t-sdm: #c4b54c;
+  --t-imp: #e8655f;
+  --t-vazio: rgba(168, 176, 189, 0.12);
+}
+
+.filtros .campo select { max-width: 260px; }
+
+/* ---------- Legenda ---------- */
+.legenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 12.5px;
+  color: var(--prata-300);
+}
+.legenda li { display: inline-flex; align-items: center; gap: 7px; }
+.legenda__marca { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.legenda__marca--dm { background: var(--t-dm); }
+.legenda__marca--sdm { background: var(--t-sdm); }
+.legenda__marca--imp { background: var(--t-imp); }
+
+/* ---------- Barras por tese ---------- */
+.barras-teses { display: flex; flex-direction: column; gap: 4px; position: relative; }
+
+.barra-tese {
+  display: grid;
+  grid-template-columns: minmax(150px, 260px) minmax(0, 1fr) 132px;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao);
+}
+.barra-tese:hover,
+.barra-tese:focus-visible { background: rgba(43, 77, 128, 0.18); outline: none; }
+.barra-tese--sel { background: rgba(201, 169, 97, 0.1); box-shadow: inset 3px 0 0 var(--ouro-500); }
+
+.barra-tese__nome { font-size: 13.5px; color: var(--prata-100); line-height: 1.25; }
+.barra-tese__n { display: block; font-size: 11.5px; color: var(--prata-400); }
+
+.barra-tese__trilho { display: flex; gap: 2px; height: 18px; min-width: 0; }
+.barra-tese__seg { height: 100%; min-width: 3px; }
+.barra-tese__seg:first-child { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.barra-tese__seg:last-child { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+.barra-tese__seg--dm { background: var(--t-dm); }
+.barra-tese__seg--sdm { background: var(--t-sdm); }
+.barra-tese__seg--imp { background: var(--t-imp); }
+.barra-tese__seg--vazio { background: var(--t-vazio); border-radius: 4px; flex: 1; }
+
+.barra-tese__taxa { font-size: 13px; color: var(--prata-100); font-variant-numeric: tabular-nums; text-align: right; }
+.barra-tese__taxa small { display: block; font-size: 11.5px; color: var(--prata-400); }
+
+.selo-amostra {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(168, 176, 189, 0.35);
+  font-size: 10.5px;
+  color: var(--prata-400);
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+/* ---------- Tabela por tese ---------- */
+.tabela--teses th.num,
+.tabela--teses td.num,
+.tabela--compacta th.num,
+.tabela--compacta td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tabela--teses tbody tr { cursor: pointer; }
+.tabela--teses tbody tr.linha--sel td { background: rgba(201, 169, 97, 0.08); box-shadow: inset 0 0 0 0 transparent; }
+.tabela--teses tbody tr.linha--sel td:first-child { box-shadow: inset 3px 0 0 var(--ouro-500); }
+.tabela--teses td.destaque { color: var(--prata-100); font-weight: 600; }
+.tabela--teses tfoot td {
+  padding: 11px 12px;
+  font-weight: 700;
+  color: var(--prata-100);
+  border-top: 1px solid rgba(201, 169, 97, 0.3);
+  background: rgba(13, 27, 52, 0.6);
+}
+.tabela thead th[data-dir]::after { content: " " attr(data-dir); color: var(--ouro-300); }
+.tabela--teses th.ordenado { color: var(--ouro-300); }
+
+/* ---------- Matriz tese × tribunal ---------- */
+.matriz { font-size: 13px; }
+.matriz th, .matriz td { text-align: center; white-space: nowrap; }
+.matriz th:first-child, .matriz td:first-child { text-align: left; }
+.matriz thead th { cursor: default; }
+.matriz td.celula { color: var(--prata-100); font-variant-numeric: tabular-nums; border-left: 2px solid var(--marinho-850); }
+.matriz td.celula small { color: var(--prata-400); }
+.matriz td.celula--pouca { opacity: 0.5; }
+.matriz td.celula--vazia { color: var(--prata-400); opacity: 0.45; }
+
+/* ---------- Detalhe ---------- */
+.detalhe-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px; }
+.detalhe__titulo {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--prata-400);
+  font-weight: 600;
+}
+.tabela--compacta { font-size: 12.5px; }
+.tabela--compacta thead th { padding: 9px 10px; cursor: default; }
+.tabela--compacta tbody td { padding: 8px 10px; }
+.tabela-rolagem--alta { max-height: 460px; overflow-y: auto; }
+
+.nota-fonte { margin: 4px 2px 0; font-size: 12px; color: var(--prata-400); max-width: 110ch; }
+
+@media (max-width: 900px) {
+  .detalhe-grade { grid-template-columns: minmax(0, 1fr); }
+  .barra-tese { grid-template-columns: 1fr; gap: 6px; }
+  .barra-tese__taxa { text-align: left; }
+  .barra-tese__taxa small { display: inline; margin-left: 6px; }
+}
+
+/* Cabeçalhos da tabela por tese em duas linhas, para caber sem rolagem. */
+.tabela--teses thead th {
+  white-space: normal;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  vertical-align: bottom;
+  min-width: 74px;
+}
+.tabela--teses td:first-child { min-width: 220px; }
+.tabela--compacta td:first-child { white-space: nowrap; }
+.detalhe__rodape { margin: 8px 2px 0; font-size: 12px; color: var(--prata-400); }

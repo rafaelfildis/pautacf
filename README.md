@@ -337,6 +337,15 @@ node scripts/processos/gerar_base.mjs caminho/para/Processos.xlsx \
   que tenha reformado a sentença.
 - Registros do tipo "Caso" ficam fora da base.
 
+Para atualizar a base com uma exportação nova sem refazer a conferência, herde a base
+anterior e aplique a aba Demandas de massa (a conferência mais recente das duas teses):
+
+```bash
+git show HEAD:assets/data/processos-base.json > /tmp/base-anterior.json
+node scripts/processos/gerar_base.mjs caminho/para/Processos.xlsx --datajud data/saida/datajud.json \
+  --herdar /tmp/base-anterior.json --massa assets/data/demandas-massa.json
+```
+
 ### Índice de prioridade e recomendação
 
 Com poucas decisões por comarca, a taxa bruta engana (1 procedente em 1 decisão vira
@@ -389,6 +398,32 @@ scripts/processos/gerar_demandas_massa.mjs  gera a base da aba a partir da plani
 
 Sem bibliotecas externas: mapa e gráficos são SVG/HTML desenhados a partir dos dados, e
 a planilha é descompactada com `DecompressionStream`, nativo do navegador.
+
+## Análise de teses (`teses.html`)
+
+Aberta pelo botão **◆ Análise de teses**, no topo da pauta e do painel de processos. Usa a
+mesma base publicada (`assets/data/processos-base.json`) e mostra, por tese:
+
+- **Barras de resultado**: as sentenças de mérito de cada tese divididas em procedente
+  com dano moral, procedente sem dano moral e improcedente (cores da aba Demandas de massa).
+- **Tabela por tese**: processos, sentenças de mérito, procedentes, improcedentes, taxa de
+  procedência, com dano moral, taxa com dano moral, acordos, extintos e aguardando.
+  Ordenável e exportável em CSV.
+- **Tese × tribunal**: taxa de procedência em cada tribunal, com o número de sentenças.
+- **Detalhe da tese** (clique numa barra ou linha): comarcas com sentença de mérito e a
+  lista de processos julgados, com resultado e dano moral.
+
+Taxa de procedência = procedentes (incluídas as parciais) ÷ sentenças de mérito; taxa com
+dano moral = procedentes com dano moral ÷ sentenças de mérito. Acordos e extinções sem
+mérito ficam fora do cálculo. Teses com menos de 5 sentenças de mérito aparecem marcadas
+como amostra pequena. Filtros: escopo (todas as teses ou só as de massa), parte adversa e
+tribunal.
+
+```
+teses.html                  página
+assets/js/teses/teses.js    cálculo e desenho
+assets/css/teses.css        estilos próprios
+```
 
 ## Automação em Python (CLI)
 

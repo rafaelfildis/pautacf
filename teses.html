@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANÁLISE DE TESES CALMON E FREITAS ADVOGADOS</title>
+<meta name="description" content="Resultado das sentenças por tese, tribunal e comarca: procedência, improcedência e dano moral.">
+<meta name="theme-color" content="#07162e">
+<script>
+  // Mesma sessão da pauta e do painel: quem já entrou não vê a tela de login de novo.
+  try {
+    if (sessionStorage.getItem('pautacf.sessao.v1') === '1') {
+      document.documentElement.classList.add('autenticado');
+    }
+  } catch (erro) { /* sessionStorage indisponível */ }
+</script>
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/img/favicon.png">
+<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="stylesheet" href="assets/css/processos.css">
+<link rel="stylesheet" href="assets/css/teses.css">
+</head>
+<body>
+
+<!-- ---------- Tela de login ---------- -->
+<div class="tela-login" id="telaLogin">
+  <div class="tela-login__cartao">
+    <img class="tela-login__logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
+    <h1 class="tela-login__titulo">Acesso restrito</h1>
+    <p class="tela-login__subtitulo">Informe suas credenciais para acessar a análise de teses.</p>
+
+    <form id="formLogin" class="tela-login__form" autocomplete="on">
+      <label class="bloco">
+        <span class="bloco__titulo">Login</span>
+        <input type="text" id="loginUsuario" name="username" autocomplete="username"
+               placeholder="usuario@escritorio.com.br" required>
+      </label>
+
+      <label class="bloco">
+        <span class="bloco__titulo">Senha de acesso</span>
+        <input type="password" id="loginSenha" name="password" autocomplete="current-password"
+               placeholder="••••••••" required>
+      </label>
+
+      <p class="tela-login__erro" id="loginErro" role="alert" hidden>Login ou senha incorretos.</p>
+
+      <button class="btn btn--ouro tela-login__entrar" type="submit">Entrar</button>
+    </form>
+
+    <p class="tela-login__rodape">Calmon e Freitas Advogados — acesso restrito à equipe.</p>
+  </div>
+</div>
+
+<!-- ---------- Aplicação ---------- -->
+<div id="appConteudo">
+
+<header class="topo">
+  <div class="topo__marca">
+    <a href="./" class="topo__inicio" title="Voltar à pauta de audiências">
+      <img class="logo" src="assets/img/logo.png" alt="Calmon &amp; Freitas Advogados" width="775" height="249">
+    </a>
+    <span class="topo__divisor" aria-hidden="true"></span>
+    <div class="topo__texto">
+      <h1>ANÁLISE DE TESES</h1>
+      <p>Calmon e Freitas Advogados</p>
+    </div>
+  </div>
+
+  <div class="topo__acoes">
+    <div class="sinc">
+      <span class="sinc__ponto sinc__ponto--carregando" id="basePonto"></span>
+      <span id="baseTexto">Carregando base…</span>
+    </div>
+    <a class="btn btn--escuro" href="processos.html" title="Mapa dos processos por UF e comarca">
+      <span aria-hidden="true">◈</span> Painel de processos
+    </a>
+    <a class="btn btn--escuro" href="./" title="Voltar à pauta de audiências">
+      <span aria-hidden="true">☰</span> Pauta de audiências
+    </a>
+    <button class="btn btn--fantasma" id="btnSair" type="button" title="Encerrar sessão">
+      <span aria-hidden="true">⏻</span> Sair
+    </button>
+  </div>
+</header>
+
+<main class="conteudo">
+
+  <!-- ---------- Filtros: valem para toda a página ---------- -->
+  <section class="painel filtros" aria-label="Filtros da análise">
+    <div class="filtros__periodo" role="radiogroup" aria-label="Escopo">
+      <button class="aba aba--ativa" type="button" role="radio" aria-checked="true" data-escopo="todas">Todas as teses</button>
+      <button class="aba" type="button" role="radio" aria-checked="false" data-escopo="massa"
+              title="Teses de captação em massa (bancário, consumidor e previdenciário)">Teses de massa</button>
+    </div>
+    <label class="campo"><select id="fAdversa" aria-label="Parte adversa"></select></label>
+    <label class="campo"><select id="fTribunal" aria-label="Tribunal"></select></label>
+    <button class="btn btn--fantasma btn--mini" id="btnLimpar" type="button">Limpar filtros</button>
+  </section>
+
+  <!-- ---------- Indicadores ---------- -->
+  <section class="indicadores indicadores--processos" aria-label="Indicadores">
+    <div class="indicador">
+      <span class="indicador__valor" id="kTeses">—</span>
+      <span class="indicador__rotulo">Teses</span>
+      <span class="indicador__nota" id="kTesesNota"></span>
+    </div>
+    <div class="indicador">
+      <span class="indicador__valor" id="kMerito">—</span>
+      <span class="indicador__rotulo">Sentenças de mérito</span>
+      <span class="indicador__nota" id="kMeritoNota"></span>
+    </div>
+    <div class="indicador indicador--sucesso">
+      <span class="indicador__valor" id="kTaxa">—</span>
+      <span class="indicador__rotulo">Taxa de procedência</span>
+      <span class="indicador__nota" id="kTaxaNota"></span>
+    </div>
+    <div class="indicador indicador--sucesso">
+      <span class="indicador__valor" id="kDm">—</span>
+      <span class="indicador__rotulo">Taxa com dano moral</span>
+      <span class="indicador__nota" id="kDmNota"></span>
+    </div>
+    <div class="indicador">
+      <span class="indicador__valor" id="kAguardando">—</span>
+      <span class="indicador__rotulo">Aguardando sentença</span>
+      <span class="indicador__nota" id="kAguardandoNota"></span>
+    </div>
+  </section>
+
+  <!-- ---------- Resultado por tese (gráfico) ---------- -->
+  <section class="painel cartao" aria-labelledby="tituloBarras">
+    <header class="cartao__topo">
+      <div>
+        <h2 class="cartao__titulo" id="tituloBarras">Como cada tese está sendo julgada</h2>
+        <p class="cartao__sub">Cada barra divide as sentenças de mérito da tese. Clique numa tese para ver tribunais, comarcas e processos.</p>
+      </div>
+      <ul class="legenda" aria-label="Legenda">
+        <li><span class="legenda__marca legenda__marca--dm"></span>Procedente com dano moral</li>
+        <li><span class="legenda__marca legenda__marca--sdm"></span>Procedente sem dano moral</li>
+        <li><span class="legenda__marca legenda__marca--imp"></span>Improcedente</li>
+      </ul>
+    </header>
+    <div class="barras-teses" id="barras"></div>
+    <div class="grafico__dica" id="dica" hidden></div>
+  </section>
+
+  <!-- ---------- Tabela por tese ---------- -->
+  <section class="painel cartao" aria-labelledby="tituloTabela">
+    <header class="cartao__topo">
+      <div>
+        <h2 class="cartao__titulo" id="tituloTabela">Por tese</h2>
+        <p class="cartao__sub">Taxas calculadas sobre as sentenças de mérito (procedentes + improcedentes). Acordos e extinções sem mérito ficam fora do cálculo.</p>
+      </div>
+      <div class="cartao__controles">
+        <button class="btn btn--fantasma btn--mini" id="btnCsv" type="button">Exportar CSV</button>
+      </div>
+    </header>
+    <div class="tabela-rolagem">
+      <table class="tabela tabela--teses" id="tabelaTeses">
+        <thead><tr id="cabecalhoTeses"></tr></thead>
+        <tbody id="corpoTeses"></tbody>
+        <tfoot id="rodapeTeses"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- Tese × tribunal ---------- -->
+  <section class="painel cartao" aria-labelledby="tituloMatriz">
+    <header class="cartao__topo">
+      <div>
+        <h2 class="cartao__titulo" id="tituloMatriz">Taxa de procedência por tese e tribunal</h2>
+        <p class="cartao__sub">Quanto mais forte o verde, maior a taxa. Entre parênteses, o número de sentenças de mérito; com menos de 3, a célula fica esmaecida.</p>
+      </div>
+    </header>
+    <div class="tabela-rolagem">
+      <table class="tabela matriz" id="matriz"></table>
+    </div>
+  </section>
+
+  <!-- ---------- Detalhe da tese selecionada ---------- -->
+  <section class="painel cartao" aria-labelledby="tituloDetalhe" id="detalhe" hidden>
+    <header class="cartao__topo">
+      <div>
+        <h2 class="cartao__titulo" id="tituloDetalhe">—</h2>
+        <p class="cartao__sub" id="detalheSub"></p>
+      </div>
+      <div class="cartao__controles">
+        <button class="btn btn--fantasma btn--mini" id="btnFecharDetalhe" type="button">Fechar</button>
+      </div>
+    </header>
+    <div class="detalhe-grade">
+      <div>
+        <h3 class="detalhe__titulo">Comarcas com sentença de mérito</h3>
+        <div class="tabela-rolagem">
+          <table class="tabela tabela--compacta" id="tabelaComarcas"></table>
+        </div>
+        <p class="detalhe__rodape" id="rodapeComarcas"></p>
+      </div>
+      <div>
+        <h3 class="detalhe__titulo">Processos com sentença de mérito</h3>
+        <div class="tabela-rolagem tabela-rolagem--alta">
+          <table class="tabela tabela--compacta" id="tabelaProcessos"></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="nota-fonte" id="notaFonte"></p>
+</main>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
+
+</div> <!-- /#appConteudo -->
+
+<script type="module" src="assets/js/auth.js"></script>
+<script type="module" src="assets/js/teses/teses.js"></script>
+</body>
+</html>
