@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ANÁLISE DE TESES CALMON E FREITAS ADVOGADOS</title>
-<meta name="description" content="Resultado das sentenças por tese, tribunal e comarca: procedência, improcedência e dano moral.">
+<meta name="description" content="Pesquisa nacional de sentenças por tese no DJEN e no DataJud, com procedência e dano moral por tribunal, e análise da carteira do escritório.">
 <meta name="theme-color" content="#07162e">
 <script>
   // Mesma sessão da pauta e do painel: quem já entrou não vê a tela de login de novo.
@@ -84,6 +84,204 @@
 </header>
 
 <main class="conteudo">
+
+  <nav class="painel filtros abas-pagina" aria-label="Seções">
+    <div class="filtros__periodo" role="tablist">
+      <button class="aba aba--ativa" type="button" role="tab" aria-selected="true" data-aba="pesquisa">Pesquisa nacional</button>
+      <button class="aba" type="button" role="tab" aria-selected="false" data-aba="carteira">Carteira do escritório</button>
+    </div>
+    <p class="abas-pagina__nota" id="notaAba">Sentenças publicadas no Diário de Justiça Eletrônico Nacional (DJEN) em todo o país, com leitura do resultado e do dano moral.</p>
+  </nav>
+
+  <!-- ================= Pesquisa nacional ================= -->
+  <section id="abaPesquisa" class="aba-conteudo" aria-label="Pesquisa nacional">
+
+    <form class="painel pesquisa" id="formPesquisa" autocomplete="off">
+      <div class="pesquisa__linha">
+        <label class="campo campo--busca pesquisa__chave">
+          <span class="campo__icone" aria-hidden="true">⌕</span>
+          <input type="search" id="pChave" required
+                 placeholder='Palavras-chave da tese, ex.: tarifa comunicação digital  ·  "aspas" para frase exata'
+                 aria-label="Palavras-chave">
+        </label>
+        <label class="campo pesquisa__parte">
+          <input type="text" id="pParte" placeholder="Parte (opcional), ex.: Agibank" aria-label="Parte">
+        </label>
+      </div>
+
+      <div class="pesquisa__linha">
+        <label class="pesquisa__data">De <input type="date" id="pInicio" required></label>
+        <label class="pesquisa__data">até <input type="date" id="pFim" required></label>
+        <label class="campo">
+          <select id="pTipo" aria-label="Tipo de publicação">
+            <option value="sentenca">Sentenças</option>
+            <option value="sentenca_acordao">Sentenças e acórdãos</option>
+            <option value="todas">Todas as publicações</option>
+          </select>
+        </label>
+        <label class="alternar pesquisa__datajud" title="Conta as sentenças registradas no CNJ por assunto. Exige o intermediário (⚙).">
+          <input type="checkbox" id="pDatajud"> <span>Panorama do DataJud</span>
+        </label>
+        <label class="campo pesquisa__assunto" id="campoAssunto" hidden>
+          <input type="text" id="pAssunto" list="assuntosCnj" placeholder="Assunto no CNJ, ex.: Tarifas" aria-label="Assunto no CNJ">
+          <datalist id="assuntosCnj">
+            <option value="Tarifas"></option>
+            <option value="Seguro"></option>
+            <option value="Empréstimo consignado"></option>
+            <option value="Cartão de Crédito"></option>
+            <option value="Inclusão Indevida em Cadastro de Inadimplentes"></option>
+            <option value="Indenização por Dano Moral"></option>
+            <option value="Contratos Bancários"></option>
+            <option value="Crédito Direto ao Consumidor - CDC"></option>
+          </datalist>
+        </label>
+      </div>
+
+      <fieldset class="pesquisa__tribunais">
+        <legend>Tribunais</legend>
+        <div class="pesquisa__atalhos">
+          <button class="btn btn--fantasma btn--mini" type="button" data-grupo="nordeste">Nordeste</button>
+          <button class="btn btn--fantasma btn--mini" type="button" data-grupo="sul">Sul</button>
+          <button class="btn btn--fantasma btn--mini" type="button" data-grupo="sudeste">Sudeste</button>
+          <button class="btn btn--fantasma btn--mini" type="button" data-grupo="tjs">Todos os TJs</button>
+          <button class="btn btn--fantasma btn--mini" type="button" data-grupo="nenhum">Limpar</button>
+        </div>
+        <div class="chips" id="pTribunais">
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJAC"><span>TJAC</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJAL"><span>TJAL</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJAP"><span>TJAP</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJAM"><span>TJAM</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJBA" checked><span>TJBA</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJCE" checked><span>TJCE</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJDFT"><span>TJDFT</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJES"><span>TJES</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJGO"><span>TJGO</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJMA"><span>TJMA</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJMT"><span>TJMT</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJMS"><span>TJMS</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJMG"><span>TJMG</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJPA"><span>TJPA</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJPB"><span>TJPB</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJPR"><span>TJPR</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJPE"><span>TJPE</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJPI"><span>TJPI</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJRJ"><span>TJRJ</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJRN"><span>TJRN</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJRS" checked><span>TJRS</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJRO"><span>TJRO</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJRR"><span>TJRR</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJSC"><span>TJSC</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJSE"><span>TJSE</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJSP"><span>TJSP</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TJTO"><span>TJTO</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TRF1"><span>TRF1</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TRF2"><span>TRF2</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TRF3"><span>TRF3</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TRF4"><span>TRF4</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TRF5"><span>TRF5</span></label>
+          <label class="chip"><input type="checkbox" name="tribunal" value="TRF6"><span>TRF6</span></label>
+        </div>
+      </fieldset>
+
+      <div class="pesquisa__acoes">
+        <button class="btn btn--ouro" type="submit" id="btnPesquisar">Pesquisar</button>
+        <button class="btn btn--fantasma" type="button" id="btnCancelar" hidden>Cancelar</button>
+        <span class="pesquisa__fonte" id="pModo"></span>
+        <button class="btn btn--fantasma btn--mini pesquisa__config" type="button" id="btnConfigPesquisa" title="Intermediário (proxy) para o DataJud e o DJEN">⚙ Intermediário</button>
+      </div>
+    </form>
+
+    <section class="painel cartao" id="pProgresso" hidden aria-live="polite">
+      <div class="progresso"><span class="progresso__barra" id="pBarra"></span></div>
+      <p class="cartao__sub" id="pStatus">—</p>
+      <ul class="progresso__log" id="pLog"></ul>
+    </section>
+
+    <div id="pResultados" hidden>
+      <section class="indicadores indicadores--processos" aria-label="Indicadores da pesquisa">
+        <div class="indicador"><span class="indicador__valor" id="rLidas">—</span><span class="indicador__rotulo">Sentenças encontradas</span><span class="indicador__nota" id="rLidasNota"></span></div>
+        <div class="indicador"><span class="indicador__valor" id="rMerito">—</span><span class="indicador__rotulo">Sentenças de mérito</span><span class="indicador__nota" id="rMeritoNota"></span></div>
+        <div class="indicador indicador--sucesso"><span class="indicador__valor" id="rTaxa">—</span><span class="indicador__rotulo">Taxa de procedência</span><span class="indicador__nota" id="rTaxaNota"></span></div>
+        <div class="indicador indicador--sucesso"><span class="indicador__valor" id="rDm">—</span><span class="indicador__rotulo">Taxa com dano moral</span><span class="indicador__nota" id="rDmNota"></span></div>
+        <div class="indicador"><span class="indicador__valor" id="rValor">—</span><span class="indicador__rotulo">Dano moral típico</span><span class="indicador__nota" id="rValorNota"></span></div>
+      </section>
+
+      <section class="painel cartao" aria-labelledby="tituloPorTribunal">
+        <header class="cartao__topo">
+          <div>
+            <h2 class="cartao__titulo" id="tituloPorTribunal">Como a tese está sendo julgada em cada tribunal</h2>
+            <p class="cartao__sub">Sentenças de mérito publicadas no período, divididas por resultado.</p>
+          </div>
+          <ul class="legenda" aria-label="Legenda">
+            <li><span class="legenda__marca legenda__marca--dm"></span>Procedente com dano moral</li>
+            <li><span class="legenda__marca legenda__marca--sdm"></span>Procedente sem dano moral ou não identificado</li>
+            <li><span class="legenda__marca legenda__marca--imp"></span>Improcedente</li>
+          </ul>
+        </header>
+        <div class="barras-teses" id="rBarras"></div>
+        <div class="tabela-rolagem">
+          <table class="tabela tabela--teses" id="rTabelaTribunais"></table>
+        </div>
+        <div class="grafico__dica" id="rDica" hidden></div>
+      </section>
+
+      <section class="painel cartao" aria-labelledby="tituloOrgaos">
+        <header class="cartao__topo">
+          <div>
+            <h2 class="cartao__titulo" id="tituloOrgaos">Varas e juizados</h2>
+            <p class="cartao__sub">Órgãos julgadores com sentença de mérito no período, dos que mais julgaram para os que menos julgaram.</p>
+          </div>
+        </header>
+        <div class="tabela-rolagem tabela-rolagem--alta">
+          <table class="tabela tabela--compacta" id="rTabelaOrgaos"></table>
+        </div>
+      </section>
+
+      <section class="painel cartao" aria-labelledby="tituloDecisoes">
+        <header class="cartao__topo">
+          <div>
+            <h2 class="cartao__titulo" id="tituloDecisoes">Sentenças</h2>
+            <p class="cartao__sub" id="rDecisoesSub">—</p>
+          </div>
+          <div class="cartao__controles">
+            <div class="segmento" id="rFiltroResultado" role="radiogroup" aria-label="Filtrar por resultado">
+              <button class="segmento__opcao segmento__opcao--ativa" type="button" data-filtro="todas">Todas</button>
+              <button class="segmento__opcao" type="button" data-filtro="procedentes">Procedentes</button>
+              <button class="segmento__opcao" type="button" data-filtro="dm">Com dano moral</button>
+              <button class="segmento__opcao" type="button" data-filtro="improcedente">Improcedentes</button>
+              <button class="segmento__opcao" type="button" data-filtro="outras">Outras</button>
+            </div>
+            <button class="btn btn--fantasma btn--mini" id="btnCsvPesquisa" type="button">Exportar CSV</button>
+          </div>
+        </header>
+        <div class="decisoes" id="rDecisoes"></div>
+        <nav class="paginacao" id="rPaginacao" aria-label="Páginas"></nav>
+      </section>
+
+      <section class="painel cartao" id="rDatajud" hidden aria-labelledby="tituloDatajud">
+        <header class="cartao__topo">
+          <div>
+            <h2 class="cartao__titulo" id="tituloDatajud">Panorama do DataJud (CNJ)</h2>
+            <p class="cartao__sub" id="rDatajudSub">—</p>
+          </div>
+        </header>
+        <div class="tabela-rolagem">
+          <table class="tabela tabela--teses" id="rTabelaDatajud"></table>
+        </div>
+      </section>
+    </div>
+
+    <p class="nota-fonte">
+      Fontes: Diário de Justiça Eletrônico Nacional (DJEN/Comunica PJe, comunicaapi.pje.jus.br), consultado no seu navegador,
+      e API Pública do DataJud (CNJ). O DJEN só responde a acessos feitos do Brasil. O resultado e o dano moral são lidos do
+      dispositivo de cada sentença por padrões de redação; confira o trecho e o inteiro teor antes de usar em peça.
+      Taxa de procedência = procedentes ÷ sentenças de mérito; taxa com dano moral = procedentes com dano moral ÷ sentenças de mérito.
+    </p>
+  </section>
+
+  <!-- ================= Carteira do escritório ================= -->
+  <section id="abaCarteira" class="aba-conteudo" aria-label="Carteira do escritório" hidden>
+
 
   <!-- ---------- Filtros: valem para toda a página ---------- -->
   <section class="painel filtros" aria-label="Filtros da análise">
@@ -205,7 +403,33 @@
   </section>
 
   <p class="nota-fonte" id="notaFonte"></p>
+
+  </section>
 </main>
+
+<dialog class="modal" id="modalProxy">
+  <form method="dialog" class="modal__conteudo">
+    <header class="modal__topo">
+      <h2>Intermediário (proxy)</h2>
+      <button class="modal__fechar" value="cancelar" aria-label="Fechar">×</button>
+    </header>
+    <div class="modal__corpo">
+      <p>O DataJud não aceita chamadas feitas diretamente por páginas web, e o DJEN só responde a acessos do Brasil.
+         Um intermediário gratuito no Cloudflare resolve os dois casos. O código está no repositório, em
+         <code>worker/proxy-tribunais.js</code>, com as instruções de publicação.</p>
+      <label class="bloco">
+        <span class="bloco__titulo">Endereço do intermediário</span>
+        <input type="url" id="proxyUrl" placeholder="https://proxy-tribunais.seu-usuario.workers.dev">
+      </label>
+      <label class="alternar"><input type="checkbox" id="proxyDjen"> <span>Usar o intermediário também para o DJEN</span></label>
+      <p class="cartao__sub">Fica salvo só neste navegador.</p>
+    </div>
+    <footer class="modal__rodape">
+      <button class="btn btn--fantasma" value="cancelar" type="submit">Cancelar</button>
+      <button class="btn btn--ouro" value="ok" type="submit" id="btnSalvarProxy">Salvar</button>
+    </footer>
+  </form>
+</dialog>
 
 <div class="aviso" id="aviso" role="status" aria-live="polite" hidden></div>
 
@@ -213,5 +437,6 @@
 
 <script type="module" src="assets/js/auth.js"></script>
 <script type="module" src="assets/js/teses/teses.js"></script>
+<script type="module" src="assets/js/teses/pesquisa.js"></script>
 </body>
 </html>

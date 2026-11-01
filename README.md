@@ -401,28 +401,50 @@ a planilha é descompactada com `DecompressionStream`, nativo do navegador.
 
 ## Análise de teses (`teses.html`)
 
-Aberta pelo botão **◆ Análise de teses**, no topo da pauta e do painel de processos. Usa a
-mesma base publicada (`assets/data/processos-base.json`) e mostra, por tese:
+Aberta pelo botão **◆ Análise de teses**, no topo da pauta e do painel de processos. Tem duas abas.
 
-- **Barras de resultado**: as sentenças de mérito de cada tese divididas em procedente
-  com dano moral, procedente sem dano moral e improcedente (cores da aba Demandas de massa).
-- **Tabela por tese**: processos, sentenças de mérito, procedentes, improcedentes, taxa de
-  procedência, com dano moral, taxa com dano moral, acordos, extintos e aguardando.
-  Ordenável e exportável em CSV.
-- **Tese × tribunal**: taxa de procedência em cada tribunal, com o número de sentenças.
-- **Detalhe da tese** (clique numa barra ou linha): comarcas com sentença de mérito e a
-  lista de processos julgados, com resultado e dano moral.
+### Pesquisa nacional
 
-Taxa de procedência = procedentes (incluídas as parciais) ÷ sentenças de mérito; taxa com
-dano moral = procedentes com dano moral ÷ sentenças de mérito. Acordos e extinções sem
-mérito ficam fora do cálculo. Teses com menos de 5 sentenças de mérito aparecem marcadas
-como amostra pequena. Filtros: escopo (todas as teses ou só as de massa), parte adversa e
-tribunal.
+Pesquisa sentenças publicadas em todo o país sobre uma tese:
+
+- **Filtros**: palavras-chave (todas as palavras; entre aspas, frase exata), parte (opcional),
+  período de publicação (até 62 dias), tipo (sentenças, sentenças e acórdãos, todas) e tribunais
+  (27 TJs e 6 TRFs, com atalhos por região).
+- **DJEN / Comunica PJe** (`comunicaapi.pje.jus.br/api/v1/comunicacao`, parâmetros `texto`,
+  `siglaTribunal`, `dataDisponibilizacaoInicio/Fim`, `nomeParte`, `pagina`, `itensPorPagina`):
+  consultado no navegador de quem usa o painel, até 1.000 publicações por tribunal e pesquisa.
+  Cada sentença é lida por `assets/js/teses/sentenca.js`, que localiza o dispositivo e extrai o
+  resultado (procedente, parcial, improcedente, extinto, acordo), a condenação em dano moral e o
+  valor. O trecho lido aparece em "Ver dispositivo", com links para o inteiro teor e a certidão.
+- **Resultados**: indicadores, barras e tabela por tribunal (taxa de procedência, taxa com dano
+  moral, mediana do dano moral), varas e juizados, lista de sentenças filtrável e CSV.
+- **Panorama do DataJud** (opcional): para um assunto do CNJ (ex.: Tarifas), conta por tribunal as
+  sentenças registradas no período (procedentes, parciais, improcedentes, extinções, acordos). O
+  DataJud não informa dano moral e chega com semanas de atraso.
+
+O DJEN só responde a acessos feitos do Brasil, e o DataJud não aceita chamadas de páginas web
+(sem CORS). Para o DataJud, e para o DJEN se o navegador for bloqueado, publique o intermediário
+`worker/proxy-tribunais.js` no Cloudflare Workers (plano gratuito) e informe o endereço no botão
+**⚙ Intermediário**. Ele só repassa essas duas consultas e só aceita o endereço do painel
+(variável `ORIGENS`). Nada é gravado: os resultados ficam na aba do navegador.
+
+### Carteira do escritório
+
+Os processos do escritório (`assets/data/processos-base.json`) por tese: barras de resultado,
+tabela por tese (processos, sentenças de mérito, procedentes, improcedentes, taxas de procedência
+e de dano moral, acordos, extintos, aguardando), tese × tribunal e detalhe por comarca e processo.
+
+Taxa de procedência = procedentes (incluídas as parciais) ÷ sentenças de mérito; taxa com dano
+moral = procedentes com dano moral ÷ sentenças de mérito. Acordos e extinções ficam fora.
 
 ```
-teses.html                  página
-assets/js/teses/teses.js    cálculo e desenho
-assets/css/teses.css        estilos próprios
+teses.html                      página (duas abas)
+assets/js/teses/pesquisa.js     pesquisa nacional (DJEN e DataJud)
+assets/js/teses/sentenca.js     leitura do dispositivo das sentenças
+assets/js/teses/teses.js        carteira do escritório
+assets/css/teses.css            estilos
+worker/proxy-tribunais.js       intermediário opcional (Cloudflare Worker)
+tests/test_sentenca.mjs         testes da leitura das sentenças
 ```
 
 ## Automação em Python (CLI)

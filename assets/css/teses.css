@@ -147,3 +147,89 @@
 .tabela--teses tfoot td { padding-left: 9px; padding-right: 9px; }
 .tabela--compacta thead th { letter-spacing: 0.06em; padding: 9px 8px; }
 .tabela--compacta tbody td { padding: 8px 8px; }
+
+/* ================= Abas da página ================= */
+.abas-pagina { justify-content: space-between; }
+.abas-pagina__nota { margin: 0; font-size: 12.5px; color: var(--prata-400); max-width: 70ch; }
+
+/* ================= Pesquisa nacional ================= */
+.pesquisa { padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+.pesquisa__linha { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; }
+.pesquisa__chave { flex: 3 1 420px; }
+.pesquisa__parte { flex: 1 1 220px; }
+.pesquisa__parte input { width: 100%; }
+.pesquisa__data { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--prata-400); }
+.pesquisa__assunto input { min-width: 260px; }
+.pesquisa__tribunais { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.pesquisa__tribunais legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--prata-400);
+}
+.pesquisa__atalhos { display: flex; flex-wrap: wrap; gap: 6px; }
+.pesquisa__acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pesquisa__fonte { font-size: 12.5px; color: var(--prata-400); }
+.pesquisa__config { margin-left: auto; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { position: relative; cursor: pointer; }
+.chip input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.chip span {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(168, 176, 189, 0.25);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--prata-300);
+  transition: background var(--transicao), border-color var(--transicao), color var(--transicao);
+}
+.chip:hover span { border-color: var(--ouro-500); color: var(--ouro-300); }
+.chip input:checked + span { background: linear-gradient(180deg, var(--ouro-500), var(--ouro-600)); border-color: var(--ouro-500); color: var(--marinho-900); }
+.chip input:focus-visible + span { outline: 2px solid var(--ouro-300); outline-offset: 2px; }
+
+/* ---------- Progresso ---------- */
+.progresso { height: 6px; border-radius: 999px; background: var(--t-vazio); overflow: hidden; }
+.progresso__barra { display: block; height: 100%; width: 0; background: var(--ouro-500); transition: width 300ms ease; }
+.progresso__log { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--prata-400); }
+.progresso__log .ok { color: var(--prata-100); }
+.progresso__log .erro { color: var(--t-imp); }
+
+/* ---------- Lista de sentenças ---------- */
+.decisoes { display: flex; flex-direction: column; }
+.decisao {
+  display: grid;
+  grid-template-columns: 92px 64px minmax(0, 1fr) 200px 170px;
+  gap: 4px 14px;
+  align-items: start;
+  padding: 11px 6px;
+  border-bottom: 1px solid rgba(168, 176, 189, 0.09);
+  font-size: 13px;
+  color: var(--prata-300);
+}
+.decisao--cabecalho {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ouro-400);
+  font-weight: 700;
+  border-bottom-color: rgba(201, 169, 97, 0.3);
+}
+.decisao__orgao { color: var(--prata-100); }
+.decisao__processo { display: block; font-variant-numeric: tabular-nums; font-size: 12px; color: var(--prata-400); user-select: all; }
+.decisao__dm { color: var(--prata-100); }
+.decisao__trecho { grid-column: 1 / -1; }
+.decisao__trecho summary { cursor: pointer; font-size: 12.5px; color: var(--ouro-400); width: fit-content; }
+.decisao__trecho p { margin: 6px 0 2px; font-size: 12.5px; line-height: 1.55; color: var(--prata-300); max-width: 140ch; }
+.decisao__links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; font-size: 12px; }
+.vazio { padding: 16px 6px; color: var(--prata-400); font-size: 13px; }
+
+@media (max-width: 700px) {
+  .decisao { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .decisao--cabecalho { display: none; }
+  .pesquisa__config { margin-left: 0; }
+}
