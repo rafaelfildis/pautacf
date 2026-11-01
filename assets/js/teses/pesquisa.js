@@ -24,7 +24,8 @@ const PAUSA_MS = 600;
 const DJ_POR_PAGINA = 100;
 const DJ_MAX_PAGINAS = 10;
 const ITENS_LISTA = 40;
-const PERIODO_MAXIMO_DIAS = 62;
+const PERIODO_MAXIMO_DIAS = 366;
+const JANELA_DIAS = 31; // períodos longos são consultados em janelas de até 31 dias
 const CHAVE_CONFIG = 'pautacf.pesquisa.v1';
 
 const GRUPOS = {
@@ -162,29 +163,57 @@ function registrar(item, tribunal) {
   return true;
 }
 
+/** Divide o período em janelas de até JANELA_DIAS dias (datas ISO, inclusive). */
+export function janelas(inicio, fim, dias = JANELA_DIAS) {
+  const lista = [];
+  let a = new Date(`${inicio}T12:00:00`);
+  const f = new Date(`${fim}T12:00:00`);
+  while (a <= f) {
+    const b = new Date(a);
+    b.setDate(b.getDate() + dias - 1);
+    const fimJanela = b < f ? b : f;
+    lista.push([isoLocal(a), isoLocal(fimJanela)]);
+    a = new Date(fimJanela);
+    a.setDate(a.getDate() + 1);
+  }
+  return lista;
+}
+
 async function pesquisarTribunal(tribunal, consulta, sinal, avisar) {
   let novas = 0;
   let lidasTribunal = 0;
-  for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
-    const params = {
-      siglaTribunal: tribunal,
-      texto: consulta.chave.replace(/"/g, ''),
-      dataDisponibilizacaoInicio: consulta.inicio,
-      dataDisponibilizacaoFim: consulta.fim,
-      pagina: String(pagina),
-      itensPorPagina: String(POR_PAGINA),
-    };
-    if (consulta.parte) params.nomeParte = consulta.parte;
-    const { itens, total } = await consultarDjen(params, sinal);
-    lidasTribunal += itens.length;
-    estado.lidas += itens.length;
-    for (const item of itens) if (aceitar(item, consulta) && registrar(item, tribunal)) novas += 1;
-    avisar(`${tribunal}: ${fmtInt.format(lidasTribunal)}${total ? ` de ${fmtInt.format(total)}` : ''} publicações lidas, ${novas} sentenças`);
-    renderizarResultados();
-    if (itens.length < POR_PAGINA || (total && lidasTribunal >= total)) return { novas, lidasTribunal, total, completo: true };
+  const incompletas = [];
+  const periodos = janelas(consulta.inicio, consulta.fim);
+  // Com parte informada, a busca no DJEN vai pelo nome da parte (mais seletivo)
+  // e as palavras-chave são conferidas aqui; sem parte, vai pelas palavras-chave.
+  const texto = (consulta.parte || consulta.chave).replace(/"/g, '').trim();
+  for (const [i, [ini, fim]] of periodos.entries()) {
+    let lidasJanela = 0;
+    let completa = false;
+    for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
+      const params = {
+        siglaTribunal: tribunal,
+        texto,
+        dataDisponibilizacaoInicio: ini,
+        dataDisponibilizacaoFim: fim,
+        pagina: String(pagina),
+        itensPorPagina: String(POR_PAGINA),
+      };
+      const { itens, total } = await consultarDjen(params, sinal);
+      lidasJanela += itens.length;
+      lidasTribunal += itens.length;
+      estado.lidas += itens.length;
+      for (const item of itens) if (aceitar(item, consulta) && registrar(item, tribunal)) novas += 1;
+      avisar(`${tribunal}: ${fmtInt.format(lidasTribunal)} publicações lidas, ${novas} sentenças`
+        + (periodos.length > 1 ? ` · período ${i + 1} de ${periodos.length}` : ''));
+      renderizarResultados();
+      if (itens.length < POR_PAGINA || (total && lidasJanela >= total)) { completa = true; break; }
+      await espera(PAUSA_MS, sinal);
+    }
+    if (!completa) incompletas.push(`${dataBr(ini)} a ${dataBr(fim)}`);
     await espera(PAUSA_MS, sinal);
   }
-  return { novas, lidasTribunal, total: null, completo: false };
+  return { novas, lidasTribunal, completo: !incompletas.length, incompletas };
 }
 
 // ------------------------------------------------------------------ DataJud
@@ -451,7 +480,7 @@ function validar(c) {
   if (!c.tribunais.length) return 'Escolha ao menos um tribunal.';
   if (!c.inicio || !c.fim || c.inicio > c.fim) return 'Confira o período: a data inicial deve ser anterior à final.';
   const dias = (new Date(c.fim) - new Date(c.inicio)) / 86400000 + 1;
-  if (dias > PERIODO_MAXIMO_DIAS) return `Período de até ${PERIODO_MAXIMO_DIAS} dias por pesquisa (escolhido: ${Math.round(dias)}).`;
+  if (dias > PERIODO_MAXIMO_DIAS) return `Período de até 1 ano por pesquisa (escolhido: ${Math.round(dias)} dias).`;
   if (c.datajud && !proxy()) return 'O panorama do DataJud precisa do intermediário: configure em ⚙ ou desmarque a opção.';
   if (c.datajud && !c.assunto) return 'Informe o assunto do CNJ para o panorama do DataJud (ex.: Tarifas).';
   return null;
@@ -489,7 +518,7 @@ async function pesquisar(evento) {
       try {
         const r = await pesquisarTribunal(tribunal, consulta, signal, (txt) => { item.textContent = txt; });
         item.className = 'ok';
-        if (!r.completo) item.textContent += ` · limite de ${MAX_PAGINAS * POR_PAGINA} publicações: reduza o período para ver tudo`;
+        if (!r.completo) item.textContent += ` · atingido o limite de ${MAX_PAGINAS * POR_PAGINA} publicações em ${r.incompletas.join(', ')}: use palavras-chave mais específicas ou informe a parte`;
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         item.className = 'erro';
