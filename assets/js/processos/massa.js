@@ -296,7 +296,7 @@ function renderTabela() {
     if (p.c !== 'ag') chip.style.background = CAT[p.c].cor;
     r.append(chip, document.createTextNode(NOME_RES[p.r] + (p.ext ? ` (${p.ext})` : '')));
     tdR.append(r);
-    tr.append(tdR, el('td', {}, p.r === 'procedente' || p.r === 'parcial' ? (p.dm ? 'Com dano moral' : 'Sem dano moral') : '—'), el('td', { class: 'm-num' }, p.u || '—'), el('td', { class: 'obs' }, p.o || '—'));
+    tr.append(tdR, el('td', {}, p.r === 'procedente' || p.r === 'parcial' ? (p.dm ? 'Com dano moral' : p.dm === null ? 'A conferir' : 'Sem dano moral') : '—'), el('td', { class: 'm-num' }, p.u || '—'), el('td', { class: 'obs' }, p.o || '—'));
     corpo.append(tr);
   }
   $('#m_contagem').textContent = `${mostrar.length} de ${lista.length} processos`;
@@ -365,7 +365,7 @@ export async function iniciarMassa() {
     const ref = base.referencia ? base.referencia.split('-').reverse().join('/') : null;
     const lista = UFS.map((uf) => `TJ${uf}`);
     const tribunais = lista.length > 1 ? `${lista.slice(0, -1).join(', ')} e ${lista.at(-1)}` : lista[0];
-    $('#m_fonte').textContent = `Tarifa de Comunicação Digital e Débito Seguro no ${tribunais}, conferidos nos sistemas dos tribunais${ref ? ` até ${ref}` : ''}.`;
+    $('#m_fonte').textContent = `Tarifa de Comunicação Digital e Débito Seguro no ${tribunais}, processos contra o Agibank${ref ? ` com andamentos até ${ref}` : ''}.`;
   } catch (erro) {
     console.error(erro);
     $('#m_fonte').textContent = 'Não foi possível carregar a base de Demandas de massa.';
