@@ -106,7 +106,7 @@
 .matriz td.celula--vazia { color: var(--prata-400); opacity: 0.45; }
 
 /* ---------- Detalhe ---------- */
-.detalhe-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px; }
+.detalhe-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
 .detalhe__titulo {
   margin: 0 0 8px;
   font-size: 11px;
@@ -130,13 +130,20 @@
 }
 
 /* Cabeçalhos da tabela por tese em duas linhas, para caber sem rolagem. */
-.tabela--teses thead th {
+.tabela--teses thead th,
+.tabela--teses thead th.num {
   white-space: normal;
   letter-spacing: 0.06em;
   line-height: 1.25;
   vertical-align: bottom;
-  min-width: 74px;
+  min-width: 64px;
+  max-width: 120px;
+  padding: 11px 9px;
 }
 .tabela--teses td:first-child { min-width: 220px; }
 .tabela--compacta td:first-child { white-space: nowrap; }
 .detalhe__rodape { margin: 8px 2px 0; font-size: 12px; color: var(--prata-400); }
+.tabela--teses tbody td,
+.tabela--teses tfoot td { padding-left: 9px; padding-right: 9px; }
+.tabela--compacta thead th { letter-spacing: 0.06em; padding: 9px 8px; }
+.tabela--compacta tbody td { padding: 8px 8px; }
